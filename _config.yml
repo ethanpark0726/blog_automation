@@ -31,7 +31,7 @@ plugins:
   - jekyll-sitemap
 
 # ─── 포스트 설정 ─────────────────────────────────────────────────
-permalink: /:lang/:year/:month/:day/:title/
+permalink: /:categories/:year/:month/:day/:title/
 
 # ─── 컬렉션 (다국어 지원) ───────────────────────────────────────
 defaults:
