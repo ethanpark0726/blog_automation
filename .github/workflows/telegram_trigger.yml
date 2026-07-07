@@ -1,0 +1,84 @@
+name: 🤖 Telegram Blog Automation
+
+on:
+  workflow_dispatch:
+    inputs:
+      query_input:
+        description: '텔레그램에서 받은 블로그 주제 또는 질문'
+        required: true
+        type: string
+      chat_id:
+        description: '텔레그램 채팅방 ID (완료 알림용)'
+        required: false
+        type: string
+
+jobs:
+  generate-and-deploy:
+    name: Generate & Deploy Blog Post
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      # ── 1. 저장소 체크아웃 ───────────────────────────────────
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
+
+      # ── 2. Python 환경 세팅 ──────────────────────────────────
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # ── 3. 의존성 설치 ───────────────────────────────────────
+      - name: 📦 Install Dependencies
+        run: |
+          pip install -r scripts/requirements.txt
+
+      # ── 4. 멀티 에이전트 실행 ────────────────────────────────
+      - name: ✍️ Run Multi-Agent (Writer + Editor)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          QUERY_INPUT: ${{ github.event.inputs.query_input }}
+          CHAT_ID: ${{ github.event.inputs.chat_id }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          python scripts/multi_agent.py
+
+      # ── 5. Git 설정 ──────────────────────────────────────────
+      - name: 🔧 Configure Git
+        run: |
+          git config --global user.email "blog-bot@github-actions.com"
+          git config --global user.name "Blog Automation Bot 🤖"
+
+      # ── 6. 변경사항 확인 및 커밋 ─────────────────────────────
+      - name: 📝 Commit New Posts
+        run: |
+          git add _posts/
+          if git diff --staged --quiet; then
+            echo "No new files to commit."
+          else
+            COMMIT_MSG="feat: add post from Telegram (ko/en) - $(date +'%Y-%m-%d %H:%M:%S')"
+            git commit -m "$COMMIT_MSG"
+          fi
+
+      # ── 7. 원격 저장소에 Push ─────────────────────────────────
+      - name: 🚀 Push to GitHub
+        run: |
+          git push origin main
+
+      # ── 8. 텔레그램 완료 알림 ────────────────────────────────
+      - name: 📩 Send Telegram Completion Notification
+        if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ github.event.inputs.chat_id }}
+          JOB_STATUS: ${{ job.status }}
+          QUERY_INPUT: ${{ github.event.inputs.query_input }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python scripts/notify.py

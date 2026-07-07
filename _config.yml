@@ -1,0 +1,60 @@
+# Blog Automation Jekyll Configuration
+# =====================================
+
+# ─── 기본 사이트 정보 ───────────────────────────────────────────
+title: "Tech Blog | 기술 블로그"
+description: "AI가 자동으로 생성하는 한국어/영어 기술 블로그"
+baseurl: ""  # 서브디렉토리 없으면 빈 문자열, 있으면 "/repo-name"
+url: ""  # 실제 URL로 교체: "https://username.github.io"
+author:
+  name: "Blog Automation Bot"
+  email: "blog@example.com"
+
+# ─── 언어 설정 ──────────────────────────────────────────────────
+lang: "ko"
+timezone: Asia/Seoul
+
+# ─── Jekyll 빌드 설정 ───────────────────────────────────────────
+theme: minima
+markdown: kramdown
+highlighter: rouge
+
+kramdown:
+  input: GFM
+  hard_wrap: false
+  syntax_highlighter: rouge
+
+# ─── 플러그인 ────────────────────────────────────────────────────
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+# ─── 포스트 설정 ─────────────────────────────────────────────────
+permalink: /:lang/:year/:month/:day/:title/
+
+# ─── 컬렉션 (다국어 지원) ───────────────────────────────────────
+defaults:
+  - scope:
+      path: "_posts/ko"
+    values:
+      layout: post
+      lang: ko
+  - scope:
+      path: "_posts/en"
+    values:
+      layout: post
+      lang: en
+
+# ─── 제외 파일 ───────────────────────────────────────────────────
+exclude:
+  - scripts/
+  - cloudflare-worker/
+  - .github/
+  - "*.py"
+  - "*.sh"
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - vendor/
