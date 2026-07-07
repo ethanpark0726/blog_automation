@@ -41,10 +41,10 @@ if not QUERY_INPUT:
 # ── Gemini 초기화 ────────────────────────────────────────────────────────────
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
+    model_name="gemini-3.1-pro-preview",
     generation_config=genai.types.GenerationConfig(
         temperature=0.7,
-        max_output_tokens=8192,
+        max_output_tokens=65536,  # 3.1-pro는 최대 65536 토큰 지원
     )
 )
 
