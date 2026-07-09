@@ -6,6 +6,19 @@
 
 ---
 
+## [1.2.1] — 2026-07-09
+
+### Fixed
+- **Mermaid 다이어그램 파싱 오류**: 노드 레이블에 괄호 `()` 또는 한글이 포함될 경우 `Parse error` 발생하던 문제 수정
+  - `WriterAgent` 프롬프트에 Mermaid 필수 규칙 추가 — 모든 노드 레이블을 `""` 쌍따옴표로 감싸도록 지시
+  - `EditorAgent` 검수 체크리스트에 Mermaid 문법 항목(6번) 추가
+  - 기존 생성된 포스트 4개를 `scripts/fix_mermaid.py` 스크립트로 일괄 자동 수정
+
+### Added
+- **`scripts/fix_mermaid.py`**: 기존 포스트의 Mermaid 노드 레이블 자동 교정 유틸리티
+
+---
+
 ## [1.2.0] — 2026-07-09
 
 ### Added
