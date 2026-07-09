@@ -4,7 +4,7 @@
 # ─── 기본 사이트 정보 ───────────────────────────────────────────
 title: "Tech Blog | 기술 블로그"
 description: "AI가 자동으로 생성하는 한국어/영어 기술 블로그"
-baseurl: "blog_automation"  # 서브디렉토리 없으면 빈 문자열, 있으면 "/repo-name"
+baseurl: "/blog_automation"  # 서브디렉토리 없으면 빈 문자열, 있으면 "/repo-name"
 url: "https://ethanpark0726.github.io"  # 실제 URL로 교체: "https://username.github.io"
 author:
   name: "Blog Automation Bot"
