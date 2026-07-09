@@ -203,8 +203,12 @@ class WriterAgent:
 - 기술 주제라면 Mermaid 다이어그램 최소 1개 포함:
   ```mermaid
   graph TD
-      A[시작] --> B[과정]
+      A["시작"] --> B["과정"]
   ```
+- ⚠️ **Mermaid 필수 규칙**: 모든 노드 레이블은 반드시 쌍따옴표로 감쌀 것.
+  괄호(), 한글, 특수문자가 있으면 파싱 오류가 발생하므로 항상 아래처럼 작성:
+  올바른 예: `A["햇볕에 건조 (어도비 벽돌)"]`
+  잘못된 예: `A[햇볕에 건조 (어도비 벽돌)]`
 - 분량: 700-1200자 (마크다운 포함)
 - 서론, 본론(2-3섹션), 결론 구조 유지
 
@@ -232,8 +236,12 @@ Reference facts: {facts}
 - For technical topics, include at least 1 Mermaid diagram:
   ```mermaid
   graph TD
-      A[Start] --> B[Process]
+      A["Start"] --> B["Process"]
   ```
+- ⚠️ **Mermaid Rule (CRITICAL)**: Always wrap ALL node labels in double quotes.
+  Parentheses (), Korean characters, and special chars break the parser.
+  Correct: `A["Hot CrossFit (heat stress)"]`
+  Wrong:   `A[Hot CrossFit (heat stress)]`
 - Length: 600-1000 words
 - Structure: Introduction, Body (2-3 sections), Conclusion
 
@@ -321,6 +329,9 @@ class EditorAgent:
 3. ✅ 마크다운: ## 헤더, **, `, > 등 문법이 올바른가?
 4. ✅ 구조: 서론-본론-결론이 명확한가?
 5. ✅ json_meta 블록: 제목, 설명, 태그가 포함되어 있는가?
+6. ✅ Mermaid 문법: 모든 노드 레이블이 쌍따옴표로 감싸져 있는가?
+   - 올바른 예: `A["텍스트 (괄호포함)"]`
+   - 잘못된 예: `A[텍스트 (괄호포함)]` ← 반드시 수정할 것
 
 **초안:**
 ---

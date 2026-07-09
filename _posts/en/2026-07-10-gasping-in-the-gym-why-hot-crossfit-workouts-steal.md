@@ -64,8 +64,8 @@ Here's a little diagram to help visualize the whole messy process:
 graph TD
     A[Hot Environment + Intense Exercise] --> B{Body Temperature Rises Rapidly}
     B --> C[Increased Metabolic Rate]
-    B --> D[Profuse Sweating (Cooling Attempt)]
-    C --> E[Higher Oxygen Demand (for Exercise + Cooling)]
+    B --> D["Profuse Sweating (Cooling Attempt)"]
+    C --> E["Higher Oxygen Demand (for Exercise + Cooling)"]
     D --> F[Dehydration & Electrolyte Loss]
     D --> G[Increased Blood Flow to Skin]
     G --> H[Reduced Blood Flow to Working Muscles & Lungs]
