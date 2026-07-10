@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.3.0-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.4.0-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -191,7 +191,7 @@ Auto-generates Jekyll Front Matter and saves to `_posts/ko/` and `_posts/en/`.
 
 ## 📊 Current Version
 
-**v1.3.0** — Full English localization of all code, comments, and UI
+**v1.4.0** — Premium Dark Tech Theme (charcoal gray + neon green accent)
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -199,7 +199,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 
 ## 🗺️ Roadmap
 
-- **v1.4.0**: Gemini API billing → `gemini-3.1-pro` upgrade, tag filter pages
+- **`[ ]` v1.5.0**: Enable Gemini API billing → upgrade to `gemini-3.1-pro`, tags filter pages
 - **v2.0.0**: Voice input (Telegram voice messages), auto post images (Imagen API), social media sharing
 
 ---

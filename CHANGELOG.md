@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.4.0] — 2026-07-10
+
+### Changed
+- **New Dark Tech Theme**: Revamped the entire blog design using the color scheme `#1E1E24` (dark charcoal gray) and `#4ADE80` (neon green accent).
+  - Configured deep dark background (`#121214`) and rich card/sidebar background elements.
+  - Added modern glassmorphism blur effects to the sticky header.
+  - Implemented neon green accent glow effects for active filter tabs and hover states.
+  - Re-styled badges (KO/EN and Dad/Engineer) with subtle borders and semi-transparent fills for high-contrast dark mode readability.
+
+---
+
 ## [1.3.0] — 2026-07-10
 
 ### Changed
