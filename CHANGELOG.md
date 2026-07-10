@@ -6,6 +6,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.4.2] — 2026-07-10
+
+### Changed
+- **Non-AI Branding Alignment**: Re-branded the blog's content identity to remove obvious AI references, shifting to a premium human-centric general knowledge and engineering repository.
+  - Updated subtitle description to: `"A curated repository bridging software engineering logbooks, scientific curiosity, and general trivia in Korean and English."`
+  - Replaced footer notice with: `"Tech & Knowledge | Handcrafted Insights on Tech, Science, and Everyday Wisdom."`
+  - Set author name to: `"The Knowledge Logbook"`.
+  - Swapped header logo icon from `🤖` to `📚` (book) to reflect the new knowledge-centric identity.
+  - Unified all pages, category templates (`dad.md`, `engineer.md`), and post templates to inherit `_layouts/default.html` to guarantee consistent dark mode rendering.
+
+---
+
 ## [1.4.1] — 2026-07-10
 
 ### Fixed

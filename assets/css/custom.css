@@ -356,6 +356,60 @@ a:hover { color: #86EFAC; text-decoration: none; }
   background: var(--surface);
   border-radius: var(--radius);
   border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  border: 1px dashed var(--border);
+}
+
+/* ── Post Content Markdown Styling ──────────────────────── */
+.post-content h2, .post-content h3, .post-content h4 {
+  color: var(--text-primary);
+  margin-top: 28px;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+.post-content h2 { font-size: 1.4rem; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.post-content h3 { font-size: 1.2rem; }
+.post-content p {
+  margin-bottom: 16px;
+  line-height: 1.8;
+  color: #E5E7EB;
+}
+.post-content blockquote {
+  border-left: 4px solid var(--accent);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px 20px;
+  margin: 20px 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  color: #D1D5DB;
+}
+.post-content blockquote p { margin-bottom: 0; }
+.post-content ul, .post-content ol {
+  margin-bottom: 16px;
+  padding-left: 24px;
+  color: #E5E7EB;
+}
+.post-content li { margin-bottom: 8px; }
+.post-content pre {
+  background: #1E1E24;
+  border: 1px solid var(--border);
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 20px 0;
+}
+.post-content code {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  color: #60A5FA;
+  background: rgba(96, 165, 250, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.post-content pre code {
+  color: var(--text-primary);
+  background: transparent;
+  padding: 0;
+  font-size: 0.85rem;
 }
 
 /* ── Footer ─────────────────────────────────────────────── */

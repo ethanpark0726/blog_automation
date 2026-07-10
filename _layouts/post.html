@@ -1,0 +1,41 @@
+---
+layout: default
+---
+
+<div class="layout-wrapper">
+  <main class="main-content" style="max-width: 800px; margin: 0 auto;">
+    <article class="post-card" style="cursor: default; padding: 32px; gap: 20px;">
+      <div class="post-card-top">
+        <div class="post-badges">
+          <span class="lang-badge lang-{{ page.lang }}">
+            {% if page.lang == 'ko' %}🇰🇷 KO{% else %}🇺🇸 EN{% endif %}
+          </span>
+          {% for cat in page.categories %}
+            <span class="cat-badge cat-{{ cat | downcase }}">
+              {% if cat == 'Dad' %}👨‍👧 Dad{% else %}👨‍💻 Engineer{% endif %}
+            </span>
+          {% endfor %}
+        </div>
+        <time class="post-date">{{ page.date | date: "%Y.%m.%d" }}</time>
+      </div>
+
+      <h1 class="post-title" style="font-size: 1.8rem; line-height: 1.3; color: var(--text-primary); margin: 8px 0 16px;">
+        {{ page.title }}
+      </h1>
+
+      <div class="post-content" style="color: var(--text-primary); line-height: 1.8; font-size: 0.95rem;">
+        {{ content }}
+      </div>
+
+      <div class="post-tags" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+        {% for tag in page.tags %}
+          <span class="tag">#{{ tag }}</span>
+        {% endfor %}
+      </div>
+    </article>
+    
+    <div style="margin-top: 24px; display: flex; justify-content: space-between;">
+      <a href="{{ '/' | relative_url }}" class="read-more-btn">← Back to Home</a>
+    </div>
+  </main>
+</div>
