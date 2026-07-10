@@ -2,14 +2,14 @@
 """
 Multi-Agent Blog Generation System
 ====================================
-텔레그램 입력 → [Classifier] → [Search] → [Writer KO/EN] → [Editor] → Jekyll Markdown 파일 생성
+Telegram input → [Classifier] → [Search] → [Writer KO/EN] → [Editor] → Jekyll Markdown file generation
 
-에이전트 구성:
-  1. ClassifierAgent  : 주제 분류 (아빠 모드 / 엔지니어 모드) 및 키워드 추출
-  2. SearchAgent      : DuckDuckGo/Wikipedia API로 팩트 수집 (Hallucination 방지)
-  3. WriterAgent      : Gemini API 호출로 KO + EN 초안 생성
-  4. EditorAgent      : 팩트 체크, 톤앤매너 검증, 마크다운 포맷 수정
-  5. FileWriterAgent  : Jekyll Front Matter 병합 후 _posts/ko/, _posts/en/ 저장
+Agent configuration:
+  1. ClassifierAgent  : Topic classification (Dad Mode / Engineer Mode) and keyword extraction
+  2. SearchAgent      : Fact collection via DuckDuckGo/Wikipedia API (hallucination prevention)
+  3. WriterAgent      : KO + EN draft generation via Gemini API
+  4. EditorAgent      : Fact-checking, tone-and-manner validation, markdown format correction
+  5. FileWriterAgent  : Merge Jekyll Front Matter and save to _posts/ko/, _posts/en/
 """
 
 import os
@@ -24,21 +24,21 @@ from pathlib import Path
 
 import google.generativeai as genai
 
-# ── 환경변수 로드 ────────────────────────────────────────────────────────────
+# ── Load environment variables ──────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 QUERY_INPUT = os.environ.get("QUERY_INPUT", "")
 CHAT_ID = os.environ.get("CHAT_ID", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 
 if not GEMINI_API_KEY:
-    print("❌ ERROR: GEMINI_API_KEY 환경변수가 설정되지 않았습니다.")
+    print("❌ ERROR: GEMINI_API_KEY environment variable is not set.")
     sys.exit(1)
 
 if not QUERY_INPUT:
-    print("❌ ERROR: QUERY_INPUT이 비어 있습니다.")
+    print("❌ ERROR: QUERY_INPUT is empty.")
     sys.exit(1)
 
-# ── Gemini 초기화 ────────────────────────────────────────────────────────────
+# ── Initialize Gemini ───────────────────────────────────────────────────────
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel(
     model_name="gemini-2.5-flash",
@@ -52,7 +52,7 @@ KST = timezone(timedelta(hours=9))
 
 
 def send_telegram(chat_id: str, text: str) -> None:
-    """텔레그램 메시지 전송 (진행 상황 알림)"""
+    """Send a Telegram message (progress notification)"""
     if not chat_id or not TELEGRAM_BOT_TOKEN:
         return
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -66,24 +66,24 @@ def send_telegram(chat_id: str, text: str) -> None:
     try:
         urllib.request.urlopen(req, timeout=10)
     except Exception as e:
-        print(f"[Telegram] 알림 전송 실패: {e}")
+        print(f"[Telegram] Failed to send notification: {e}")
 
 
 def call_gemini(prompt: str, retry: int = 3) -> str:
-    """Gemini API 호출 (재시도 포함)"""
+    """Call the Gemini API (with retry logic)"""
     for attempt in range(retry):
         try:
             response = model.generate_content(prompt)
             return response.text.strip()
         except Exception as e:
-            print(f"[Gemini] 시도 {attempt+1}/{retry} 실패: {e}")
+            print(f"[Gemini] Attempt {attempt+1}/{retry} failed: {e}")
             if attempt < retry - 1:
                 time.sleep(5 * (attempt + 1))
-    raise RuntimeError("Gemini API 호출에 반복적으로 실패했습니다.")
+    raise RuntimeError("Gemini API call failed repeatedly.")
 
 
 def search_duckduckgo(query: str) -> str:
-    """DuckDuckGo Abstract API로 팩트 데이터 수집"""
+    """Collect fact data via DuckDuckGo Abstract API"""
     try:
         encoded = urllib.parse.quote(query)
         url = f"https://api.duckduckgo.com/?q={encoded}&format=json&no_redirect=1&no_html=1&skip_disambig=1"
@@ -93,18 +93,18 @@ def search_duckduckgo(query: str) -> str:
         
         results = []
         
-        # Abstract (위키피디아 요약)
+        # Abstract (Wikipedia summary)
         if data.get("Abstract"):
-            results.append(f"[개요] {data['Abstract']}")
+            results.append(f"[Overview] {data['Abstract']}")
         
         # Related Topics
         for topic in data.get("RelatedTopics", [])[:3]:
             if isinstance(topic, dict) and topic.get("Text"):
-                results.append(f"[관련] {topic['Text'][:200]}")
+                results.append(f"[Related] {topic['Text'][:200]}")
         
-        return "\n".join(results) if results else "검색 결과 없음 (Gemini 기반 지식으로 대체)"
+        return "\n".join(results) if results else "No search results (falling back to Gemini knowledge)"
     except Exception as e:
-        return f"검색 API 오류: {e} (Gemini 기반 지식으로 대체)"
+        return f"Search API error: {e} (falling back to Gemini knowledge)"
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -112,33 +112,33 @@ def search_duckduckgo(query: str) -> str:
 # ═══════════════════════════════════════════════════════════════════════════
 class ClassifierAgent:
     def run(self, query: str) -> dict:
-        print(f"\n[ClassifierAgent] 입력 분류 중: '{query}'")
+        print(f"\n[ClassifierAgent] Classifying input: '{query}'")
         prompt = f"""
-다음 입력 텍스트를 분석해서 JSON으로만 응답해줘. (코드 블록 없이 순수 JSON만)
+Analyze the following input text and respond with JSON only. (Pure JSON, no code blocks)
 
-입력: "{query}"
+Input: "{query}"
 
-분석 기준:
-- mode: 입력이 일반인/아이 대상("dad")인지 전문 기술("engineer")인지 판단
-  - dad: 일상적 질문, "쉽게 설명", "초등학생", 비유적 표현이 적합한 주제
-  - engineer: 기술 용어, 개발, 시스템, 알고리즘, 특정 기술 스택 관련
-- topic_ko: 한국어 핵심 주제 (10자 이내)
-- topic_en: 영어 핵심 주제 (5단어 이내)
-- keywords: 핵심 키워드 배열 (최대 5개)
-- search_query: 팩트 검색에 적합한 영어 검색어
+Analysis criteria:
+- mode: Determine whether the input is intended for a general/child audience ("dad") or is a specialized technical topic ("engineer")
+  - dad: Everyday questions, "explain simply", elementary-level, topics suitable for analogies
+  - engineer: Technical terminology, development, systems, algorithms, specific tech stacks
+- topic_ko: Core topic in Korean (within 10 characters)
+- topic_en: Core topic in English (within 5 words)
+- keywords: Array of core keywords (up to 5)
+- search_query: English search query suitable for fact retrieval
 
-응답 형식:
+Response format:
 {{"mode": "dad|engineer", "topic_ko": "...", "topic_en": "...", "keywords": ["kw1", "kw2"], "search_query": "..."}}
 """
         result_str = call_gemini(prompt)
-        # JSON 파싱
+        # Parse JSON
         try:
-            # 혹시 마크다운 코드블록이 포함된 경우 제거
+            # Strip markdown code blocks if present
             result_str = re.sub(r"```json?\s*", "", result_str)
             result_str = re.sub(r"```", "", result_str).strip()
             result = json.loads(result_str)
         except json.JSONDecodeError:
-            print(f"[ClassifierAgent] JSON 파싱 실패, 기본값 사용. 원본:\n{result_str}")
+            print(f"[ClassifierAgent] JSON parse failed, using defaults. Raw:\n{result_str}")
             result = {
                 "mode": "engineer",
                 "topic_ko": query[:20],
@@ -146,7 +146,7 @@ class ClassifierAgent:
                 "keywords": [query.split()[0]] if query.split() else ["tech"],
                 "search_query": query
             }
-        print(f"[ClassifierAgent] 분류 완료: {result}")
+        print(f"[ClassifierAgent] Classification complete: {result}")
         return result
 
 
@@ -156,25 +156,25 @@ class ClassifierAgent:
 class SearchAgent:
     def run(self, classification: dict) -> str:
         query = classification.get("search_query", classification.get("topic_en", ""))
-        print(f"\n[SearchAgent] 정보 수집 중: '{query}'")
+        print(f"\n[SearchAgent] Collecting information: '{query}'")
         
         facts = search_duckduckgo(query)
-        print(f"[SearchAgent] 수집 완료:\n{facts[:300]}...")
+        print(f"[SearchAgent] Collection complete:\n{facts[:300]}...")
         
-        # Gemini로 수집된 팩트 + 자체 지식 통합
+        # Enrich collected facts with Gemini's own knowledge
         enrich_prompt = f"""
-다음 주제에 대한 팩트 기반 정보를 정리해줘.
+Summarize fact-based information about the following topic.
 
-주제: {classification.get('topic_ko', '')} ({classification.get('topic_en', '')})
-검색 결과: {facts}
+Topic: {classification.get('topic_ko', '')} ({classification.get('topic_en', '')})
+Search results: {facts}
 
-다음 항목을 포함한 정확한 배경 정보를 200-400자 정도로 작성해 (허구 없이):
-1. 핵심 개념 정의
-2. 주요 특징 또는 원리 (2-3가지)
-3. 실제 활용 사례 또는 현황
+Write accurate background information (no fabrication) covering the following, in 200-400 characters:
+1. Core concept definition
+2. Key characteristics or principles (2-3 items)
+3. Real-world use cases or current status
 """
         enriched = call_gemini(enrich_prompt)
-        print(f"[SearchAgent] 정보 보강 완료")
+        print(f"[SearchAgent] Information enrichment complete")
         return enriched
 
 
@@ -184,42 +184,42 @@ class SearchAgent:
 class WriterAgent:
     def run(self, query: str, classification: dict, facts: str) -> dict:
         mode = classification.get("mode", "engineer")
-        print(f"\n[WriterAgent] 글 초안 작성 중 (모드: {mode})...")
+        print(f"\n[WriterAgent] Drafting post (mode: {mode})...")
         
-        # ─── 한국어 초안 ───────────────────────────────────────────────
+        # ─── Korean draft ─────────────────────────────────────────────
         ko_style = self._get_ko_style(mode)
         ko_prompt = f"""
-당신은 전문 기술 블로그 작가입니다. 다음 주제로 한국어 블로그 포스트를 작성해주세요.
+You are a professional tech blogger. Write a blog post in Korean on the following topic.
 
-주제: {query}
-참고 팩트: {facts}
+Topic: {query}
+Reference facts: {facts}
 {ko_style}
 
-**필수 포맷 규칙:**
-- 제목(H1): 사용 안 함 (Front Matter에 별도 입력됨)
-- 소제목: ## 또는 ### 사용
-- 강조: **굵게** 또는 `코드`
-- 인용/핵심 포인트: > 블록 인용 활용
-- 기술 주제라면 Mermaid 다이어그램 최소 1개 포함:
+**Required Format Rules:**
+- No H1 title (it goes into Front Matter separately)
+- Use ## or ### for subheadings
+- Use **bold** or `code` for emphasis
+- Use > blockquotes for key insights
+- For technical topics, include at least 1 Mermaid diagram:
   ```mermaid
   graph TD
-      A["시작"] --> B["과정"]
+      A["Start"] --> B["Process"]
   ```
-- ⚠️ **Mermaid 필수 규칙**: 모든 노드 레이블은 반드시 쌍따옴표로 감쌀 것.
-  괄호(), 한글, 특수문자가 있으면 파싱 오류가 발생하므로 항상 아래처럼 작성:
-  올바른 예: `A["햇볕에 건조 (어도비 벽돌)"]`
-  잘못된 예: `A[햇볕에 건조 (어도비 벽돌)]`
-- 분량: 700-1200자 (마크다운 포함)
-- 서론, 본론(2-3섹션), 결론 구조 유지
+- ⚠️ **Mermaid CRITICAL Rule**: Always wrap ALL node labels in double quotes.
+  Parentheses (), Korean characters, and special chars cause parse errors — always write like this:
+  Correct: `A["Sun-dried (adobe brick)"]`
+  Wrong:   `A[Sun-dried (adobe brick)]`
+- Length: 700-1200 characters (including markdown)
+- Maintain structure: Introduction, Body (2-3 sections), Conclusion
 
-**SEO 최적화 메타 정보 (마지막에 JSON으로):**
+**SEO Meta (at the end as JSON):**
 ```json_meta
-{{"title": "매력적인 한국어 제목", "description": "150자 이내 메타 설명", "tags": ["태그1", "태그2", "태그3"]}}
+{{"title": "Compelling Korean title", "description": "Meta description within 150 characters", "tags": ["tag1", "tag2", "tag3"]}}
 ```
 """
         ko_draft = call_gemini(ko_prompt)
         
-        # ─── 영어 초안 ───────────────────────────────────────────────
+        # ─── English draft ────────────────────────────────────────────
         en_style = self._get_en_style(mode)
         en_prompt = f"""
 You are a professional tech blogger. Write a blog post in natural, fluent English on the following topic.
@@ -252,28 +252,28 @@ Reference facts: {facts}
 """
         en_draft = call_gemini(en_prompt)
         
-        print("[WriterAgent] 초안 작성 완료 (KO + EN)")
+        print("[WriterAgent] Draft writing complete (KO + EN)")
         return {"ko": ko_draft, "en": en_draft}
     
     def _get_ko_style(self, mode: str) -> str:
         if mode == "dad":
             return """
-**글쓰기 스타일: 아빠 모드**
-- 독자: 초등학생 ~ 일반 성인
-- 어투: 친근하고 따뜻한 설명체 ("~해요", "~랍니다")
-- 복잡한 개념은 반드시 생활 속 비유로 설명 (예: "컴퓨터의 CPU는 사람의 두뇌와 같아요")
-- 전문 용어 최소화, 사용 시 괄호로 쉽게 설명
-- 이모지 적절히 활용 (🎯, 💡, 🔧 등)
+**Writing Style: Dad Mode**
+- Audience: Elementary students to general adults
+- Tone: Friendly and warm explanatory style ("~해요", "~랍니다")
+- Explain complex concepts using everyday analogies (e.g., "A computer's CPU is like the human brain")
+- Minimize jargon; when used, explain in parentheses
+- Use emojis appropriately (🎯, 💡, 🔧, etc.)
 """
         else:
             return """
-**글쓰기 스타일: 엔지니어 모드**
-- 독자: 개발자, IT 전문가
-- 어투: 명확하고 논리적인 기술 문서체
-- 전문 용어 자유롭게 사용
-- 구체적인 예시 코드, 수치, 벤치마크 포함
-- 트레이드오프와 실무 적용 관점 언급
-- Mermaid 다이어그램, 코드 블록 적극 활용
+**Writing Style: Engineer Mode**
+- Audience: Developers, IT professionals
+- Tone: Clear, logical technical documentation style
+- Use technical terminology freely
+- Include concrete code examples, figures, and benchmarks
+- Mention trade-offs and real-world application perspectives
+- Actively use Mermaid diagrams and code blocks
 """
     
     def _get_en_style(self, mode: str) -> str:
@@ -303,46 +303,46 @@ Reference facts: {facts}
 # ═══════════════════════════════════════════════════════════════════════════
 class EditorAgent:
     def run(self, drafts: dict, classification: dict, facts: str) -> dict:
-        print(f"\n[EditorAgent] 교차 검수 및 수정 중...")
+        print(f"\n[EditorAgent] Cross-reviewing and revising...")
         
         result = {}
         for lang, draft in drafts.items():
-            print(f"[EditorAgent] {lang.upper()} 검수 중...")
+            print(f"[EditorAgent] Reviewing {lang.upper()}...")
             result[lang] = self._review_and_fix(draft, lang, classification, facts)
         
-        print("[EditorAgent] 검수 완료 (KO + EN)")
+        print("[EditorAgent] Review complete (KO + EN)")
         return result
     
     def _review_and_fix(self, draft: str, lang: str, classification: dict, facts: str) -> str:
-        lang_name = "한국어" if lang == "ko" else "English"
-        lang_instruction = "한국어로" if lang == "ko" else "in English"
+        lang_name = "Korean" if lang == "ko" else "English"
+        lang_instruction = "in Korean" if lang == "ko" else "in English"
         
         prompt = f"""
-당신은 엄격한 블로그 편집장입니다. 다음 {lang_name} 초안을 심사하고, 문제가 있다면 즉시 수정된 최종본을 출력하세요.
+You are a strict blog editor. Review the following {lang_name} draft and immediately output the corrected final version if there are any issues.
 
-**참고 팩트 (검증 기준):**
+**Reference facts (verification basis):**
 {facts}
 
-**검수 체크리스트:**
-1. ✅ 팩트 체크: 허위 사실, 과장, 논리적 비약이 없는가?
-2. ✅ 톤앤매너: 어조가 일관되고 자연스러운가? (기계 번역투 없는지)
-3. ✅ 마크다운: ## 헤더, **, `, > 등 문법이 올바른가?
-4. ✅ 구조: 서론-본론-결론이 명확한가?
-5. ✅ json_meta 블록: 제목, 설명, 태그가 포함되어 있는가?
-6. ✅ Mermaid 문법: 모든 노드 레이블이 쌍따옴표로 감싸져 있는가?
-   - 올바른 예: `A["텍스트 (괄호포함)"]`
-   - 잘못된 예: `A[텍스트 (괄호포함)]` ← 반드시 수정할 것
+**Review checklist:**
+1. ✅ Fact check: Are there any false claims, exaggerations, or logical leaps?
+2. ✅ Tone and manner: Is the tone consistent and natural? (No machine-translation feel)
+3. ✅ Markdown: Are ## headers, **, `, > etc. syntactically correct?
+4. ✅ Structure: Are the introduction, body, and conclusion clearly defined?
+5. ✅ json_meta block: Does it include title, description, and tags?
+6. ✅ Mermaid syntax: Are all node labels wrapped in double quotes?
+   - Correct: `A["text (with parentheses)"]`
+   - Wrong:   `A[text (with parentheses)]` ← must be fixed
 
-**초안:**
+**Draft:**
 ---
 {draft}
 ---
 
-**출력 규칙:**
-- 수정이 필요하면 수정된 전체 본문을 출력 ({lang_instruction})
-- 수정이 불필요하면 원본 그대로 출력
-- Editor 코멘트나 설명 없이 최종본만 출력
-- json_meta 블록은 반드시 포함
+**Output rules:**
+- If revisions are needed, output the entire corrected body ({lang_instruction})
+- If no revisions are needed, output the original as-is
+- Output the final version only — no editor comments or explanations
+- The json_meta block must be included
 """
         final = call_gemini(prompt)
         return final
@@ -364,21 +364,21 @@ class FileWriterAgent:
         created_files = []
         
         for lang, content in posts.items():
-            # json_meta 블록 추출
+            # Extract json_meta block
             meta = self._extract_meta(content, lang, classification)
             title = meta.get("title", classification.get(f"topic_{lang}", "Untitled"))
             description = meta.get("description", "")
             tags = meta.get("tags", keywords)
             
-            # json_meta 블록 제거한 순수 본문
+            # Pure body content with json_meta block removed
             body = re.sub(r"```json_meta\s*\{.*?\}\s*```", "", content,
                          flags=re.DOTALL).strip()
             
-            # 슬러그 생성 (파일명용)
+            # Generate slug (for filename)
             slug = self._make_slug(title, lang)
             filename = f"{date_str}-{slug}.md"
             
-            # Jekyll Front Matter 조합
+            # Assemble Jekyll Front Matter
             tags_yaml = "\n".join([f"  - {t}" for t in tags])
             front_matter = f"""---
 layout: post
@@ -394,7 +394,7 @@ description: "{self._escape_yaml(description)}"
 """
             final_content = front_matter + body
             
-            # 폴더 생성 및 파일 저장
+            # Create directory and save file
             output_dir = Path(f"_posts/{lang}")
             output_dir.mkdir(parents=True, exist_ok=True)
             output_path = output_dir / filename
@@ -402,13 +402,13 @@ description: "{self._escape_yaml(description)}"
             with open(output_path, "w", encoding="utf-8") as f:
                 f.write(final_content)
             
-            print(f"[FileWriterAgent] 파일 생성: {output_path}")
+            print(f"[FileWriterAgent] File created: {output_path}")
             created_files.append(str(output_path))
         
         return created_files
     
     def _extract_meta(self, content: str, lang: str, classification: dict) -> dict:
-        """json_meta 블록에서 메타데이터 추출"""
+        """Extract metadata from the json_meta block"""
         match = re.search(r"```json_meta\s*(\{.*?\})\s*```", content, re.DOTALL)
         if match:
             try:
@@ -416,26 +416,26 @@ description: "{self._escape_yaml(description)}"
             except json.JSONDecodeError:
                 pass
         
-        # 폴백: Gemini로 제목 생성
+        # Fallback: generate title with Gemini
         topic = classification.get("topic_ko" if lang == "ko" else "topic_en", "Tech Post")
         return {
             "title": topic,
-            "description": f"{topic}에 대한 블로그 포스트",
+            "description": f"A blog post about {topic}",
             "tags": classification.get("keywords", ["tech"])
         }
     
     def _make_slug(self, title: str, lang: str) -> str:
-        """파일명용 슬러그 생성"""
-        # 한글 제목은 영문 키워드로 변환
+        """Generate a slug for use in filenames"""
+        # Convert Korean titles to English keyword-based slugs
         slug = re.sub(r"[^\w\s-]", "", title.lower())
         slug = re.sub(r"[\s_]+", "-", slug).strip("-")
-        slug = slug[:50]  # 최대 50자
+        slug = slug[:50]  # max 50 characters
         if not slug:
             slug = f"post-{lang}"
         return slug
     
     def _escape_yaml(self, text: str) -> str:
-        """YAML 문자열 이스케이프"""
+        """Escape YAML string"""
         return text.replace('"', '\\"').replace("\n", " ")
 
 
@@ -444,66 +444,66 @@ description: "{self._escape_yaml(description)}"
 # ═══════════════════════════════════════════════════════════════════════════
 def main():
     print("=" * 60)
-    print(f"🤖 Multi-Agent Blog Generator 시작")
-    print(f"📝 입력: {QUERY_INPUT}")
+    print(f"🤖 Multi-Agent Blog Generator started")
+    print(f"📝 Input: {QUERY_INPUT}")
     print("=" * 60)
     
-    send_telegram(CHAT_ID, f"🤖 *에이전트 파이프라인 시작*\n\n📝 주제: `{QUERY_INPUT}`\n\n`[1/5]` 주제 분류 중...")
+    send_telegram(CHAT_ID, f"🤖 *Agent pipeline started*\n\n📝 Topic: `{QUERY_INPUT}`\n\n`[1/5]` Classifying topic...")
     
     try:
-        # ─── Step 1: 분류 ────────────────────────────────────────────
+        # ─── Step 1: Classify ─────────────────────────────────────────
         classifier = ClassifierAgent()
         classification = classifier.run(QUERY_INPUT)
         
         send_telegram(CHAT_ID, 
-            f"✅ `[1/5]` 분류 완료: *{'아빠 모드' if classification['mode'] == 'dad' else '엔지니어 모드'}*\n"
-            f"🔍 `[2/5]` 정보 수집 중..."
+            f"✅ `[1/5]` Classification complete: *{'Dad Mode' if classification['mode'] == 'dad' else 'Engineer Mode'}*\n"
+            f"🔍 `[2/5]` Collecting information..."
         )
         
-        # ─── Step 2: 검색 ────────────────────────────────────────────
+        # ─── Step 2: Search ───────────────────────────────────────────
         search = SearchAgent()
         facts = search.run(classification)
         
         send_telegram(CHAT_ID, 
-            f"✅ `[2/5]` 정보 수집 완료\n✍️ `[3/5]` Writer 에이전트 초안 작성 중..."
+            f"✅ `[2/5]` Information collection complete\n✍️ `[3/5]` Writer agent drafting post..."
         )
         
-        # ─── Step 3: 글쓰기 ──────────────────────────────────────────
+        # ─── Step 3: Write ────────────────────────────────────────────
         writer = WriterAgent()
         drafts = writer.run(QUERY_INPUT, classification, facts)
         
         send_telegram(CHAT_ID, 
-            f"✅ `[3/5]` 초안 완성 (KO + EN)\n🔍 `[4/5]` Editor 에이전트 검수 중..."
+            f"✅ `[3/5]` Drafts complete (KO + EN)\n🔍 `[4/5]` Editor agent reviewing..."
         )
         
-        # ─── Step 4: 편집 ────────────────────────────────────────────
+        # ─── Step 4: Edit ─────────────────────────────────────────────
         editor = EditorAgent()
         final_posts = editor.run(drafts, classification, facts)
         
         send_telegram(CHAT_ID, 
-            f"✅ `[4/5]` 검수 완료\n💾 `[5/5]` 파일 저장 및 Git Push 중..."
+            f"✅ `[4/5]` Review complete\n💾 `[5/5]` Saving files and pushing to Git..."
         )
         
-        # ─── Step 5: 파일 저장 ───────────────────────────────────────
+        # ─── Step 5: Save files ──────────────────────────────────────
         file_writer = FileWriterAgent()
         created_files = file_writer.run(final_posts, classification)
         
         print("\n" + "=" * 60)
-        print("✅ 모든 에이전트 파이프라인 완료!")
-        print("생성된 파일:")
+        print("✅ All agent pipeline steps complete!")
+        print("Created files:")
         for f in created_files:
             print(f"  - {f}")
         print("=" * 60)
         
-        # 환경변수로 파일 목록 전달 (GitHub Actions 스텝 간 공유)
+        # Pass file list via environment variable (shared between GitHub Actions steps)
         with open(os.environ.get("GITHUB_ENV", "/dev/null"), "a") as env_file:
             env_file.write(f"CREATED_FILES={','.join(created_files)}\n")
         
     except Exception as e:
-        print(f"\n❌ 파이프라인 오류: {e}")
+        print(f"\n❌ Pipeline error: {e}")
         import traceback
         traceback.print_exc()
-        send_telegram(CHAT_ID, f"❌ *오류 발생*\n\n`{str(e)[:200]}`")
+        send_telegram(CHAT_ID, f"❌ *Error occurred*\n\n`{str(e)[:200]}`")
         sys.exit(1)
 
 

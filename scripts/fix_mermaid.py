@@ -1,15 +1,14 @@
 """
-기존 생성된 포스트의 Mermaid 다이어그램에서
-따옴표 없이 괄호가 포함된 노드 레이블을 자동으로 수정합니다.
+Automatically corrects node labels containing parentheses without quotes in Mermaid diagrams of existing posts.
 
-예: A[햇볕에 건조 (어도비 벽돌)]  →  A["햇볕에 건조 (어도비 벽돌)"]
+Example: A[Sun-dried (adobe brick)]  →  A["Sun-dried (adobe brick)"]
 """
 import re
 import glob
 
-# mermaid 블록 내에서만 처리
+# Process only inside mermaid code blocks
 MERMAID_BLOCK = re.compile(r'(```mermaid\s*)(.*?)(```)', re.DOTALL)
-# 따옴표 없이 괄호가 포함된 노드 레이블: [텍스트(뭔가)] 패턴
+# Pattern to find node labels with parentheses but without quotes: [text(something)]
 UNQUOTED_NODE = re.compile(r'\[([^"\]\[]*\([^)]*\)[^"\]\[]*)\]')
 
 def fix_mermaid_in_file(filepath):
@@ -38,4 +37,4 @@ for fp in files:
     if fix_mermaid_in_file(fp):
         fixed_count += 1
 
-print(f"\n총 {len(files)}개 파일 검사, {fixed_count}개 수정 완료.")
+print(f"\nChecked {len(files)} files, successfully fixed {fixed_count} files.")

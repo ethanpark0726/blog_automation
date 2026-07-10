@@ -1,6 +1,6 @@
 ---
 # _layouts/home.html
-# 사이드바 + 카드형 포스트 목록이 있는 커스텀 홈 레이아웃
+# Custom home layout with sidebar + card-style post list
 ---
 <!DOCTYPE html>
 <html lang="{{ page.lang | default: site.lang | default: 'ko' }}">
@@ -15,34 +15,34 @@
 </head>
 <body>
 
-  <!-- ── 헤더 ───────────────────────────────────────────── -->
+  <!-- ── Header ─────────────────────────────────────────── -->
   <header class="site-header">
     <div class="header-inner">
       <a href="{{ '/' | relative_url }}" class="site-logo">
         🤖 <span>{{ site.title }}</span>
       </a>
       <nav class="header-nav">
-        <a href="{{ '/' | relative_url }}">홈</a>
+        <a href="{{ '/' | relative_url }}">Home</a>
         <a href="{{ '/dad/' | relative_url }}">👨‍👧 Dad</a>
         <a href="{{ '/engineer/' | relative_url }}">👨‍💻 Engineer</a>
       </nav>
     </div>
   </header>
 
-  <!-- ── 메인 레이아웃: 포스트 목록 + 사이드바 ─────────── -->
+  <!-- ── Main Layout: Post List + Sidebar ───────────────── -->
   <div class="layout-wrapper">
 
-    <!-- 포스트 목록 (메인) -->
+    <!-- Post List (Main) -->
     <main class="main-content">
 
-      <!-- 언어 필터 탭 -->
+      <!-- Language Filter Tabs -->
       <div class="filter-tabs">
-        <button class="tab-btn active" onclick="filterPosts('all')">🌏 전체</button>
-        <button class="tab-btn" onclick="filterPosts('ko')">🇰🇷 한국어</button>
+        <button class="tab-btn active" onclick="filterPosts('all')">🌏 All</button>
+        <button class="tab-btn" onclick="filterPosts('ko')">🇰🇷 Korean</button>
         <button class="tab-btn" onclick="filterPosts('en')">🇺🇸 English</button>
       </div>
 
-      <!-- 포스트 카드 목록 -->
+      <!-- Post Card List -->
       <div class="post-grid" id="postGrid">
         {% for post in site.posts %}
           <article class="post-card" data-lang="{{ post.lang }}" data-category="{{ post.categories | first | downcase }}">
@@ -70,25 +70,25 @@
                 <span class="tag">#{{ tag }}</span>
               {% endfor %}
             </div>
-            <a href="{{ post.url | relative_url }}" class="read-more-btn">읽기 →</a>
+            <a href="{{ post.url | relative_url }}" class="read-more-btn">Read More →</a>
           </article>
         {% endfor %}
 
         {% if site.posts.size == 0 %}
           <div class="empty-state">
-            <p>🤖 아직 포스트가 없어요!</p>
-            <p>텔레그램 봇에 메시지를 보내면 자동으로 포스트가 생성됩니다.</p>
+            <p>🤖 No posts yet!</p>
+            <p>Send a message to the Telegram bot and posts will be automatically generated.</p>
           </div>
         {% endif %}
       </div>
     </main>
 
-    <!-- ── 사이드바 ───────────────────────────────────────── -->
+    <!-- ── Sidebar ──────────────────────────────────────────── -->
     <aside class="sidebar">
 
-      <!-- 카테고리 그룹 -->
+      <!-- Category Group -->
       <div class="sidebar-widget">
-        <h3 class="widget-title">📂 카테고리</h3>
+        <h3 class="widget-title">📂 Categories</h3>
         <ul class="category-list">
           {% assign dad_posts = site.posts | where_exp: "p", "p.categories contains 'Dad'" %}
           {% assign eng_posts = site.posts | where_exp: "p", "p.categories contains 'Engineer'" %}
@@ -107,15 +107,15 @@
         </ul>
       </div>
 
-      <!-- 언어별 그룹 -->
+      <!-- Language Group -->
       <div class="sidebar-widget">
-        <h3 class="widget-title">🌐 언어</h3>
+        <h3 class="widget-title">🌐 Language</h3>
         <ul class="category-list">
           {% assign ko_posts = site.posts | where: "lang", "ko" %}
           {% assign en_posts = site.posts | where: "lang", "en" %}
           <li>
             <a href="#" onclick="filterPosts('ko'); return false;" class="cat-link">
-              🇰🇷 한국어
+              🇰🇷 Korean
               <span class="count">{{ ko_posts.size }}</span>
             </a>
           </li>
@@ -128,9 +128,9 @@
         </ul>
       </div>
 
-      <!-- 최근 포스트 -->
+      <!-- Recent Posts -->
       <div class="sidebar-widget">
-        <h3 class="widget-title">🕐 최근 포스트</h3>
+        <h3 class="widget-title">🕐 Recent Posts</h3>
         <ul class="recent-list">
           {% for post in site.posts limit: 5 %}
             <li>
@@ -141,11 +141,11 @@
         </ul>
       </div>
 
-      <!-- 태그 클라우드 -->
+      <!-- Tag Cloud -->
       {% assign all_tags = site.posts | map: "tags" | join: "," | split: "," | uniq %}
       {% if all_tags.size > 0 %}
       <div class="sidebar-widget">
-        <h3 class="widget-title">🏷️ 태그</h3>
+        <h3 class="widget-title">🏷️ Tags</h3>
         <div class="tag-cloud">
           {% for tag in all_tags limit: 20 %}
             <span class="tag">{{ tag | strip }}</span>
@@ -154,17 +154,17 @@
       </div>
       {% endif %}
 
-      <!-- 통계 -->
+      <!-- Stats -->
       <div class="sidebar-widget stats-widget">
-        <h3 class="widget-title">📊 통계</h3>
+        <h3 class="widget-title">📊 Stats</h3>
         <div class="stats-grid">
           <div class="stat-item">
             <span class="stat-number">{{ site.posts.size }}</span>
-            <span class="stat-label">전체 포스트</span>
+            <span class="stat-label">Total Posts</span>
           </div>
           <div class="stat-item">
             <span class="stat-number">{{ ko_posts.size }}</span>
-            <span class="stat-label">한국어</span>
+            <span class="stat-label">Korean</span>
           </div>
           <div class="stat-item">
             <span class="stat-number">{{ eng_posts.size }}</span>
@@ -172,7 +172,7 @@
           </div>
           <div class="stat-item">
             <span class="stat-number">2</span>
-            <span class="stat-label">카테고리</span>
+            <span class="stat-label">Categories</span>
           </div>
         </div>
       </div>
@@ -180,12 +180,12 @@
     </aside>
   </div>
 
-  <!-- ── 푸터 ───────────────────────────────────────────── -->
+  <!-- ── Footer ─────────────────────────────────────────── -->
   <footer class="site-footer">
-    <p>🤖 AI로 자동 생성되는 기술 블로그 | Powered by Gemini + GitHub Actions</p>
+    <p>🤖 AI-powered auto-generated tech blog | Powered by Gemini + GitHub Actions</p>
   </footer>
 
-  <!-- ── 필터 스크립트 ──────────────────────────────────── -->
+  <!-- ── Filter Script ──────────────────────────────────── -->
   <script>
     function filterPosts(lang) {
       const cards = document.querySelectorAll('.post-card');

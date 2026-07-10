@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-GitHub Actions 완료 후 텔레그램으로 배포 결과 알림을 전송합니다.
+Sends Telegram notification with deployment results after GitHub Actions workflow completes.
 """
 
 import os
@@ -16,7 +16,7 @@ GITHUB_REPOSITORY = os.environ.get("GITHUB_REPOSITORY", "")
 
 def send_message(chat_id: str, text: str) -> None:
     if not chat_id or not TELEGRAM_BOT_TOKEN:
-        print("텔레그램 설정 없음 - 알림 건너뜀")
+        print("Telegram settings missing - skipping notification")
         return
     
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -33,37 +33,37 @@ def send_message(chat_id: str, text: str) -> None:
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            print(f"텔레그램 알림 전송 완료: {resp.status}")
+            print(f"Telegram notification sent: {resp.status}")
     except Exception as e:
-        print(f"텔레그램 알림 실패: {e}")
+        print(f"Telegram notification failed: {e}")
 
 
 def main():
     if not CHAT_ID:
-        print("CHAT_ID가 없어 알림을 건너뜁니다.")
+        print("Skipping notification because CHAT_ID is missing.")
         return
     
-    # GitHub Pages URL 생성
+    # Generate GitHub Pages URL
     owner, repo = GITHUB_REPOSITORY.split("/") if "/" in GITHUB_REPOSITORY else ("", GITHUB_REPOSITORY)
     pages_url = f"https://{owner}.github.io/{repo}/" if owner else ""
     
     if JOB_STATUS == "success":
         message = (
-            f"🎉 *블로그 배포 완료!*\n\n"
-            f"📝 주제: `{QUERY_INPUT}`\n\n"
-            f"✅ Writer & Editor 에이전트 검수 완료\n"
-            f"✅ 한국어 + 영어 포스트 2개 생성\n"
-            f"✅ GitHub Pages 배포 완료\n\n"
-            f"🔗 블로그 보기: [{pages_url}]({pages_url})\n\n"
-            f"_새 포스트는 GitHub Pages 빌드 후 1-2분 내 반영됩니다._"
+            f"🎉 *Blog Deployment Complete!*\n\n"
+            f"📝 Topic: `{QUERY_INPUT}`\n\n"
+            f"✅ Writer & Editor agents review complete\n"
+            f"✅ Korean + English posts generated successfully\n"
+            f"✅ Deployed to GitHub Pages\n\n"
+            f"🔗 View Blog: [{pages_url}]({pages_url})\n\n"
+            f"_New posts will be visible in 1-2 minutes after the GitHub Pages build completes._"
         )
     else:
         message = (
-            f"❌ *블로그 배포 실패*\n\n"
-            f"📝 주제: `{QUERY_INPUT}`\n"
-            f"⚠️ 상태: `{JOB_STATUS}`\n\n"
-            f"🔍 [GitHub Actions 로그 확인](https://github.com/{GITHUB_REPOSITORY}/actions)\n\n"
-            f"문제가 반복되면 Secrets 설정을 확인해주세요."
+            f"❌ *Blog Deployment Failed*\n\n"
+            f"📝 Topic: `{QUERY_INPUT}`\n"
+            f"⚠️ Status: `{JOB_STATUS}`\n\n"
+            f"🔍 [View GitHub Actions Logs](https://github.com/{GITHUB_REPOSITORY}/actions)\n\n"
+            f"Please verify your Secrets configuration if this issue persists."
         )
     
     send_message(CHAT_ID, message)

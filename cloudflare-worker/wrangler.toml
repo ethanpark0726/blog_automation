@@ -2,14 +2,14 @@ name = "telegram-github-bridge"
 main = "worker.js"
 compatibility_date = "2024-01-01"
 
-# 환경변수는 Cloudflare Dashboard에서 설정하거나
-# `wrangler secret put VARIABLE_NAME` 명령으로 설정합니다.
-# 아래는 예시이며, 실제 값은 절대 여기에 입력하지 마세요!
+# Environment variables can be set via the Cloudflare Dashboard or
+# using the `wrangler secret put VARIABLE_NAME` command.
+# The values below are examples — never enter real values here!
 
 # [vars]
 # GITHUB_REPO = "your-username/your-repo-name"
 # ALLOWED_CHAT_ID = "123456789"
 # 
-# 민감한 값 (반드시 secret으로 설정):
+# Sensitive values (must be set as secrets):
 # TELEGRAM_BOT_TOKEN → wrangler secret put TELEGRAM_BOT_TOKEN
 # GITHUB_TOKEN       → wrangler secret put GITHUB_TOKEN

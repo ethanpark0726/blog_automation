@@ -1,7 +1,7 @@
 name: 📋 Docs Update Enforcer
 
-# 코드/스크립트/설정이 변경될 때 README와 CHANGELOG도
-# 반드시 함께 수정되었는지 자동으로 검사합니다.
+# Automatically checks that README and CHANGELOG are also updated
+# whenever code, scripts, or configuration files are changed.
 
 on:
   push:
@@ -18,17 +18,17 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2  # 이전 커밋과 비교하기 위해 2개 가져옴
+          fetch-depth: 2  # Fetch 2 commits to allow comparison with the previous commit
 
       - name: 🔍 Detect Changed Files
         id: changes
         run: |
-          echo "=== 변경된 파일 목록 ==="
+          echo "=== Changed File List ==="
           git diff --name-only HEAD~1 HEAD || git diff --name-only HEAD
 
           CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD)
 
-          # _posts/ 변경만 있는지 확인 (자동 포스트 생성은 예외)
+          # Check if only _posts/ changed (auto-generated posts are exempt)
           NON_POST_CHANGES=$(echo "$CHANGED" | grep -v '^_posts/' | grep -v '^\.git' || true)
           README_CHANGED=$(echo "$CHANGED" | grep -c 'README.md' || true)
           CHANGELOG_CHANGED=$(echo "$CHANGED" | grep -c 'CHANGELOG.md' || true)
@@ -40,10 +40,10 @@ jobs:
           echo "changelog_changed=$CHANGELOG_CHANGED" >> $GITHUB_OUTPUT
 
           echo ""
-          echo "=== 분석 결과 ==="
-          echo "포스트 외 변경 파일: $(echo "$NON_POST_CHANGES" | grep -c . || true)개"
-          echo "README 수정 여부: $README_CHANGED"
-          echo "CHANGELOG 수정 여부: $CHANGELOG_CHANGED"
+          echo "=== Analysis Results ==="
+          echo "Non-post changed files: $(echo "$NON_POST_CHANGES" | grep -c . || true)"
+          echo "README updated: $README_CHANGED"
+          echo "CHANGELOG updated: $CHANGELOG_CHANGED"
 
       - name: ✅ Enforce Docs Update Rule
         run: |
@@ -51,53 +51,53 @@ jobs:
           README_CHANGED="${{ steps.changes.outputs.readme_changed }}"
           CHANGELOG_CHANGED="${{ steps.changes.outputs.changelog_changed }}"
 
-          # _posts/ 외에 변경된 파일이 없으면 (자동 포스트만) → 검사 스킵
+          # If no files changed outside _posts/ (auto-posts only) → skip check
           if [ -z "$(echo "$CHANGED" | tr -d '[:space:]')" ]; then
-            echo "✅ 자동 포스트 생성 커밋 — 문서 업데이트 검사 스킵"
+            echo "✅ Auto-generated post commit — skipping docs update check"
             exit 0
           fi
 
-          # README.md와 CHANGELOG.md 자체가 변경된 경우도 스킵
+          # Also skip if only README.md or CHANGELOG.md themselves changed
           if echo "$CHANGED" | grep -qE '^(README|CHANGELOG)\.md$'; then
             ONLY_DOCS=true
           else
             ONLY_DOCS=false
           fi
 
-          echo "=== 변경된 파일 ==="
+          echo "=== Changed Files ==="
           echo "$CHANGED"
           echo ""
 
           FAILED=0
 
-          # README 검사
+          # README check
           if [ "$README_CHANGED" = "0" ]; then
-            echo "❌ README.md가 업데이트되지 않았습니다!"
+            echo "❌ README.md has not been updated!"
             FAILED=1
           else
-            echo "✅ README.md 업데이트 확인"
+            echo "✅ README.md update confirmed"
           fi
 
-          # CHANGELOG 검사
+          # CHANGELOG check
           if [ "$CHANGELOG_CHANGED" = "0" ]; then
-            echo "❌ CHANGELOG.md가 업데이트되지 않았습니다!"
+            echo "❌ CHANGELOG.md has not been updated!"
             FAILED=1
           else
-            echo "✅ CHANGELOG.md 업데이트 확인"
+            echo "✅ CHANGELOG.md update confirmed"
           fi
 
           if [ "$FAILED" = "1" ]; then
             echo ""
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "🚨 [규칙 위반] 코드/설정 변경 시 README와 CHANGELOG를"
-            echo "   반드시 함께 업데이트해야 합니다."
+            echo "🚨 [Rule Violation] When changing code or config, README and CHANGELOG"
+            echo "   must be updated at the same time."
             echo ""
-            echo "   업데이트 방법:"
-            echo "   1. CHANGELOG.md에 새 버전 항목 추가 (버그픽스: patch +0.0.1)"
-            echo "   2. README.md의 버전 배지 및 현재 버전 섹션 수정"
+            echo "   How to update:"
+            echo "   1. Add a new version entry to CHANGELOG.md (bugfix: patch +0.0.1)"
+            echo "   2. Update the version badge and current version section in README.md"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             exit 1
           fi
 
           echo ""
-          echo "🎉 모든 문서 업데이트 규칙을 준수했습니다!"
+          echo "🎉 All documentation update rules have been followed!"

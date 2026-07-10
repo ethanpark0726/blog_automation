@@ -1,74 +1,74 @@
-# 📋 기여 규칙 (Contributing Guide)
+# 📋 Contributing Guide
 
-## 🔴 필수 규칙: 변경 시 문서 업데이트 의무
+## 🔴 Required Rule: Documentation Must Be Updated With Every Change
 
-> **모든 코드/설정 변경은 반드시 `README.md`와 `CHANGELOG.md`를 함께 수정해야 합니다.**  
-> GitHub Actions `check_docs.yml`이 자동으로 이를 검사하며, 위반 시 빌드가 실패합니다.
+> **Every code or configuration change MUST also update `README.md` and `CHANGELOG.md`.**  
+> GitHub Actions (`check_docs.yml`) automatically enforces this. Violations will fail the build.
 
 ---
 
-## 버전 규칙 (Semantic Versioning)
+## Versioning (Semantic Versioning)
 
 ```
 MAJOR.MINOR.PATCH
-  │     │     └── 버그 수정, 문서 업데이트       예: 1.2.0 → 1.2.1
-  │     └──────── 새 기능 추가 (하위 호환)        예: 1.2.1 → 1.3.0
-  └────────────── 하위 비호환 대규모 변경         예: 1.3.0 → 2.0.0
+  │     │     └── Bug fixes, doc-only updates         e.g. 1.2.0 → 1.2.1
+  │     └──────── New features (backward compatible)  e.g. 1.2.1 → 1.3.0
+  └────────────── Breaking / major changes            e.g. 1.3.0 → 2.0.0
 ```
 
 ---
 
-## 변경 시 체크리스트
+## Change Checklist
 
-### 1. CHANGELOG.md 업데이트
+### 1. Update CHANGELOG.md
 
-파일 상단에 새 버전 항목 추가:
+Add a new version entry at the top of the file:
 
 ```markdown
 ## [X.Y.Z] — YYYY-MM-DD
 
 ### Added
-- 새로 추가된 기능
+- New features or files
 
 ### Changed
-- 기존 동작이 변경된 내용
+- Modifications to existing behavior
 
 ### Fixed
-- 수정된 버그
+- Bug fixes
 
 ### Removed
-- 제거된 기능
+- Deleted features or files
 ```
 
-### 2. README.md 업데이트
+### 2. Update README.md
 
-① 버전 배지 수정:
+① Update the version badge:
 ```markdown
 [![Version](https://img.shields.io/badge/Version-X.Y.Z-purple)](CHANGELOG.md)
 ```
 
-② "현재 버전" 섹션 수정:
+② Update the "Current Version" section:
 ```markdown
-## 📊 현재 버전
+## 📊 Current Version
 
-**vX.Y.Z** — 변경 요약 한 줄
+**vX.Y.Z** — One-line summary of the change
 ```
 
 ---
 
-## 예외 (검사 자동 스킵)
+## Exceptions (Auto-skipped by CI)
 
-아래 경우는 문서 업데이트 없이 커밋 가능합니다:
-- `_posts/ko/` 또는 `_posts/en/` 파일만 변경 (텔레그램 봇 자동 포스트)
+The following commits do **not** require documentation updates:
+- Changes only to `_posts/ko/` or `_posts/en/` (auto-generated Telegram bot posts)
 
 ---
 
-## 커밋 메시지 규칙
+## Commit Message Convention
 
 ```
-feat: 새 기능 추가
-fix: 버그 수정
-docs: 문서만 수정
-config: 설정 변경
-refactor: 코드 리팩토링 (기능 변화 없음)
+feat:     New feature added
+fix:      Bug fix
+docs:     Documentation only
+config:   Configuration change
+refactor: Code refactor (no behavior change)
 ```
