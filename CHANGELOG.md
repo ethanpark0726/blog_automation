@@ -6,6 +6,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.4.1] — 2026-07-10
+
+### Fixed
+- **Stats Widget English Count Bug**: Fixed a variable naming collision in `_layouts/home.html` where `eng_posts` (Engineer category posts) was mistakenly used instead of `en_posts` (English language posts) to display the English post count.
+
+---
+
 ## [1.4.0] — 2026-07-10
 
 ### Changed
