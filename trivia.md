@@ -1,22 +1,22 @@
 ---
 layout: default
-title: "📂 Dad Mode Posts"
-permalink: /dad/
-description: "A collection of Dad Mode posts with friendly, easy-to-understand explanations"
+title: "📂 Trivia Vault"
+permalink: /trivia/
+description: "A curated storage of general knowledge, interesting science facts, history, and everyday wisdom."
 ---
 
 <div class="layout-wrapper">
   <main class="main-content">
     <div class="category-page">
       <div class="category-header">
-        <h1>👨‍👧 Dad Mode Posts</h1>
-        <p>Easy and fun tech stories that anyone can understand</p>
+        <h1>💡 Trivia Vault</h1>
+        <p>A treasure chest of general knowledge, science trivia, and everyday wisdom</p>
       </div>
 
-      {% assign dad_posts = site.posts | where_exp: "post", "post.categories contains 'Dad'" %}
-      {% if dad_posts.size > 0 %}
+      {% assign trivia_posts = site.posts | where_exp: "post", "post.categories contains 'Trivia'" %}
+      {% if trivia_posts.size > 0 %}
         <div class="post-list">
-          {% for post in dad_posts %}
+          {% for post in trivia_posts %}
             <article class="post-card">
               <div class="post-card-meta" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <span class="lang-badge lang-{{ post.lang }}">{{ post.lang | upcase }}</span>
@@ -31,7 +31,7 @@ description: "A collection of Dad Mode posts with friendly, easy-to-understand e
           {% endfor %}
         </div>
       {% else %}
-        <p class="no-posts">No posts yet. Send a question to the Telegram bot! 🤖</p>
+        <p class="no-posts">No posts yet. Ask the bot on Telegram! 💡</p>
       {% endif %}
     </div>
   </main>

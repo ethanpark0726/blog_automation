@@ -2,7 +2,7 @@
 layout: post
 title: "Gasping in the Gym: Why Hot CrossFit Workouts Steal Your Breath"
 date: 2026-07-10 01:37:38 +0900
-categories: [Dad]
+categories: [Trivia]
 tags:
   - CrossFit
   - hot weather exercise

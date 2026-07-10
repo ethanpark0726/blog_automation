@@ -26,7 +26,7 @@ layout: default
               </span>
               {% for cat in post.categories %}
                 <span class="cat-badge cat-{{ cat | downcase }}">
-                  {% if cat == 'Dad' %}👨‍👧 Dad{% else %}👨‍💻 Engineer{% endif %}
+                  {% if cat == 'Trivia' %}💡 Trivia{% else %}👨‍💻 Engineer{% endif %}
                 </span>
               {% endfor %}
             </div>
@@ -63,12 +63,12 @@ layout: default
     <div class="sidebar-widget">
       <h3 class="widget-title">📂 Categories</h3>
       <ul class="category-list">
-        {% assign dad_posts = site.posts | where_exp: "p", "p.categories contains 'Dad'" %}
+        {% assign trivia_posts = site.posts | where_exp: "p", "p.categories contains 'Trivia'" %}
         {% assign eng_posts = site.posts | where_exp: "p", "p.categories contains 'Engineer'" %}
         <li>
-          <a href="{{ '/dad/' | relative_url }}" class="cat-link cat-dad">
-            👨‍👧 Dad Mode
-            <span class="count">{{ dad_posts.size }}</span>
+          <a href="{{ '/trivia/' | relative_url }}" class="cat-link cat-trivia">
+            💡 Trivia Vault
+            <span class="count">{{ trivia_posts.size }}</span>
           </a>
         </li>
         <li>

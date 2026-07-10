@@ -2,7 +2,7 @@
 layout: post
 title: "Solar System Formation"
 date: 2026-07-08 05:42:52 +0900
-categories: [Dad]
+categories: [Trivia]
 tags:
   - solar system
   - formation

@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.5.0] — 2026-07-10
+
+### Changed
+- **Trivia Vault Migration**: Migrated the "Dad Mode" category to "Trivia Vault" to better align with the blog's general knowledge, science, and history focus.
+  - Updated classification model logic in `multi_agent.py` to route general knowledge inquiries to `trivia` mode instead of `dad`.
+  - Refactored `FileWriterAgent` to output posts with the `Trivia` category instead of `Dad`.
+  - Created a database migration script `scripts/migrate_categories.py` and successfully migrated all 6 existing posts to `categories: [Trivia]`.
+  - Deleted `dad.md` and created `trivia.md` as the new category archive page under `/trivia/`.
+  - Renamed CSS variables (e.g. `--dad-color` to `--trivia-color`) and element selectors (e.g. `.cat-dad` to `.cat-trivia`) in `custom.css` to clean up old design artifacts.
+  - Updated headers, footers, badges, and sidebar counts in `default.html`, `home.html`, and `post.html` templates to link and render the new `💡 Trivia` vault badge.
+
+### Removed
+- **`dad.md`**: Permanently removed the obsolete category page.
+
+---
+
 ## [1.4.2] — 2026-07-10
 
 ### Changed

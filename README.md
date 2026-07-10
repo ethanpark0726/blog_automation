@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.4.2-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.5.0-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -17,7 +17,7 @@
 | Feature | Description |
 |---|---|
 | 📱 **Telegram Trigger** | Send a message to the bot → pipeline starts automatically |
-| 🔍 **Auto Classification** | Detects Dad Mode (friendly) vs Engineer Mode (technical) |
+| 🔍 **Auto Classification** | Detects Trivia Mode (general wisdom) vs Engineer Mode (technical) |
 | 🌐 **Multilingual** | Korean + English posts generated simultaneously |
 | ✍️ **Multi-Agent QA** | Writer → Editor cross-review and auto-correction |
 | 🚀 **Auto Deploy** | Git Push → GitHub Pages auto-build |
@@ -34,7 +34,7 @@
         ↓
 ⚡ GitHub Actions  (workflow_dispatch)
         ↓
-🔍 ClassifierAgent  →  Dad / Engineer mode detection
+🔍 ClassifierAgent  →  Trivia / Engineer mode detection
 🌐 SearchAgent      →  DuckDuckGo fact collection
 ✍️  WriterAgent      →  Gemini KO + EN draft generation
 📝 EditorAgent      →  Fact-check + auto-correction
@@ -79,7 +79,7 @@ blog_automation/
 ├── _config.yml                # Jekyll configuration
 ├── Gemfile                    # Ruby dependencies
 ├── index.md                   # Blog home page
-├── dad.md                     # Dad category page
+├── trivia.md                  # Trivia Vault category page
 ├── engineer.md                # Engineer category page
 ├── CHANGELOG.md               # Version history
 ├── CONTRIBUTING.md            # Contribution rules
@@ -142,7 +142,7 @@ In ~2–4 minutes, KO + EN posts will appear on your GitHub Pages blog! 🎉
 
 ### ClassifierAgent
 Analyzes input and classifies into two modes:
-- **Dad Mode**: Casual questions, beginner-friendly topics → friendly analogies
+- **Trivia Mode**: Casual questions, general knowledge, science trivia, and history → simple analogies
 - **Engineer Mode**: Technical terms, dev/system topics → technical depth + diagrams
 
 ### SearchAgent
@@ -191,7 +191,7 @@ Auto-generates Jekyll Front Matter and saves to `_posts/ko/` and `_posts/en/`.
 
 ## 📊 Current Version
 
-**v1.4.2** — Non-AI rebranding alignment & layout unification
+**v1.5.0** — Replaced Dad Mode with Trivia Vault
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -199,7 +199,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 
 ## 🗺️ Roadmap
 
-- **`[ ]` v1.5.0**: Enable Gemini API billing → upgrade to `gemini-3.1-pro`, tags filter pages
+- **`[ ]` v1.6.0**: Enable Gemini API billing → upgrade to `gemini-3.1-pro`, tags filter pages
 - **v2.0.0**: Voice input (Telegram voice messages), auto post images (Imagen API), social media sharing
 
 ---

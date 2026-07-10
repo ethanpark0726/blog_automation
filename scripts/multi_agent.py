@@ -119,8 +119,8 @@ Analyze the following input text and respond with JSON only. (Pure JSON, no code
 Input: "{query}"
 
 Analysis criteria:
-- mode: Determine whether the input is intended for a general/child audience ("dad") or is a specialized technical topic ("engineer")
-  - dad: Everyday questions, "explain simply", elementary-level, topics suitable for analogies
+- mode: Determine whether the input is a general knowledge/trivia topic ("trivia") or a specialized technical topic ("engineer")
+  - trivia: Everyday science, history, common sense, "explain simply", light topics suitable for analogies
   - engineer: Technical terminology, development, systems, algorithms, specific tech stacks
 - topic_ko: Core topic in Korean (within 10 characters)
 - topic_en: Core topic in English (within 5 words)
@@ -128,7 +128,7 @@ Analysis criteria:
 - search_query: English search query suitable for fact retrieval
 
 Response format:
-{{"mode": "dad|engineer", "topic_ko": "...", "topic_en": "...", "keywords": ["kw1", "kw2"], "search_query": "..."}}
+{{"mode": "trivia|engineer", "topic_ko": "...", "topic_en": "...", "keywords": ["kw1", "kw2"], "search_query": "..."}}
 """
         result_str = call_gemini(prompt)
         # Parse JSON
@@ -256,10 +256,10 @@ Reference facts: {facts}
         return {"ko": ko_draft, "en": en_draft}
     
     def _get_ko_style(self, mode: str) -> str:
-        if mode == "dad":
+        if mode == "trivia":
             return """
-**Writing Style: Dad Mode**
-- Audience: Elementary students to general adults
+**Writing Style: Trivia Vault**
+- Audience: General public interested in trivia and science
 - Tone: Friendly and warm explanatory style ("~해요", "~랍니다")
 - Explain complex concepts using everyday analogies (e.g., "A computer's CPU is like the human brain")
 - Minimize jargon; when used, explain in parentheses
@@ -277,9 +277,9 @@ Reference facts: {facts}
 """
     
     def _get_en_style(self, mode: str) -> str:
-        if mode == "dad":
+        if mode == "trivia":
             return """
-**Writing Style: Dad Mode**
+**Writing Style: Trivia Vault**
 - Audience: General public, beginners
 - Tone: Warm, friendly, conversational
 - Use everyday analogies to explain complex concepts
@@ -358,7 +358,7 @@ class FileWriterAgent:
         datetime_str = now_kst.strftime("%Y-%m-%d %H:%M:%S +0900")
         
         mode = classification.get("mode", "engineer")
-        category = "Dad" if mode == "dad" else "Engineer"
+        category = "Trivia" if mode == "trivia" else "Engineer"
         keywords = classification.get("keywords", [])
         
         created_files = []
@@ -456,7 +456,7 @@ def main():
         classification = classifier.run(QUERY_INPUT)
         
         send_telegram(CHAT_ID, 
-            f"✅ `[1/5]` Classification complete: *{'Dad Mode' if classification['mode'] == 'dad' else 'Engineer Mode'}*\n"
+            f"✅ `[1/5]` Classification complete: *{'Trivia Vault' if classification['mode'] == 'trivia' else 'Engineer Mode'}*\n"
             f"🔍 `[2/5]` Collecting information..."
         )
         

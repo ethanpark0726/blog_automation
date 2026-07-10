@@ -2,7 +2,7 @@
 layout: post
 title: "Beyond Photoshop: Discovering the Earthy Charm of Adobe Architecture"
 date: 2026-07-08 05:19:15 +0900
-categories: [Dad]
+categories: [Trivia]
 tags:
   - Adobe Architecture
   - Sustainable Building
