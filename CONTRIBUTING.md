@@ -42,17 +42,21 @@ Add a new version entry at the top of the file:
 
 ### 2. Update README.md
 
-① Update the version badge:
+① Update the version badge at the top:
 ```markdown
 [![Version](https://img.shields.io/badge/Version-X.Y.Z-purple)](CHANGELOG.md)
 ```
 
-② Update the "Current Version" section:
+② Update the **"Current Version"** section with a concise summary:
 ```markdown
 ## 📊 Current Version
 
-**vX.Y.Z** — One-line summary of the change
+**vX.Y.Z** — One-line summary of the changes/features
 ```
+
+③ Check and update the **"Roadmap"** section:
+- Mark completed milestones/tasks as done.
+- Shift upcoming version targets/features if necessary to maintain chronological accuracy.
 
 ---
 

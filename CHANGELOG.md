@@ -6,6 +6,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.6.2] — 2026-07-11
+
+### Changed
+- **Documentation Update Rules Enforcement**: Updated the blog's contribution guidelines and local/CI validation checks to ensure project information remains accurate.
+  - Aligned `README.md`'s **Current Version** and **Roadmap** sections with the actual state of the repository (`v1.6.2`).
+  - Added new checklist instructions to [CONTRIBUTING.md](CONTRIBUTING.md) to explicitly require updating the version summary and shifting roadmap milestones when releasing changes.
+  - Appended reminders to the GitHub Actions `check_docs.yml` validation script failure console, ensuring developers are prompted to verify the roadmap on build issues.
+
+---
+
 ## [1.6.1] — 2026-07-11
 
 ### Fixed

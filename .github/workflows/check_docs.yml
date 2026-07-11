@@ -95,6 +95,7 @@ jobs:
             echo "   How to update:"
             echo "   1. Add a new version entry to CHANGELOG.md (bugfix: patch +0.0.1)"
             echo "   2. Update the version badge and current version section in README.md"
+            echo "   3. Verify and update the Roadmap section in README.md if appropriate"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             exit 1
           fi
