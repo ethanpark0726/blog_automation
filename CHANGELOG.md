@@ -6,6 +6,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.8.0] — 2026-07-11
+
+### Added
+- **Scholarly & Literature Search Integration**: Re-routed data collection to query academic and authoritative reference sources based on topic mode.
+  - **`trivia` mode**: Queries Google Books API and Wikipedia Search API alongside standard web summaries.
+  - **`engineer` mode**: Queries arXiv API, Crossref API, and customized IETF/standards vendor whitepapers via search operators.
+- **`FactVerifierAgent` (NEW)**: Built a specialized scientific verification agent that extracts factual assertions from drafts, cross-references them against the collected scholarly references, and generates validation reports with citation mappings.
+- **Reference Generation**: Refactored the `EditorAgent` to consume verification reports and automatically append a formatted, hyperlinked "References" or "참고자료" section at the bottom of the blog posts.
+- **6-Agent Pipeline Flow**: Updated `scripts/multi_agent.py` to route inputs through: Classifier → ScholarlySearch → Writer → FactVerifier → Editor → FileWriter.
+
+---
+
 ## [1.7.0] — 2026-07-11
 
 ### Added
