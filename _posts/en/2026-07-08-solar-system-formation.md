@@ -14,14 +14,6 @@ topic_id: "solar-system-formation"
 description: "Solar System Formation에 대한 블로그 포스트"
 ---
 
-```json
-{
-  "title": "The Cosmic Blueprint: How Our Solar System Was Born",
-  "description": "Journey back 4.6 billion years to explore the incredible story of our solar system's formation, from a swirling cloud of dust and gas to the diverse planets we know today, explained by the Nebular Hypothesis.",
-  "tags": ["solar system", "formation", "nebular hypothesis", "accretion", "planets", "astronomy", "space", "exoplanets", "cosmic history"]
-}
-```
----
 Hey there, curious minds! 👋 Ever looked up at the night sky, spotted the moon, or perhaps even a glimmering planet, and wondered, "How did all this get here?" It's a question as old as humanity, and thankfully, scientists have pieced together an incredible story that's both mind-boggling and surprisingly elegant.
 
 So, grab a comfy chair, maybe a cup of coffee, because today, we're going on a journey back in time – about **4.6 billion years ago**, to be precise – to uncover the cosmic origin story of our very own solar system. Think of it like a grand construction project, but instead of bricks and mortar, we're talking about gas, dust, and a whole lot of gravity! 🎯

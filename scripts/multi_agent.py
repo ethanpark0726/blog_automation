@@ -615,8 +615,8 @@ class FileWriterAgent:
             description = meta.get("description", "")
             tags = meta.get("tags", keywords)
             
-            # Pure body content with json_meta block removed
-            body = re.sub(r"```json_meta\s*\{.*?\}\s*```", "", content,
+            # Pure body content with json_meta/json block removed
+            body = re.sub(r"```(?:json_meta|json)\s*\{.*?\}\s*```", "", content,
                          flags=re.DOTALL).strip()
             
             # Generate slug (for filename)
