@@ -1,0 +1,58 @@
+name: 🔄 Regenerate Existing Posts
+
+# Allows manual trigger from the GitHub Actions tab to update older posts
+on:
+  workflow_dispatch:
+
+jobs:
+  regenerate:
+    name: 🔄 Run Post Regeneration
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      # ── 1. Repository Checkout ────────────────────────────────
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
+
+      # ── 2. Python Environment Setup ────────────────────────────
+      - name: 🐍 Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # ── 3. Install Dependencies ──────────────────────────────
+      - name: 📦 Install Dependencies
+        run: |
+          pip install -r scripts/requirements.txt
+
+      # ── 4. Run Regeneration Script ───────────────────────────
+      - name: 🔄 Run Regeneration Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || vars.TELEGRAM_CHAT_ID }}
+        run: |
+          python scripts/regenerate_posts.py
+
+      # ── 5. Git Configuration ────────────────────────────────
+      - name: 🔧 Configure Git
+        run: |
+          git config --global user.email "blog-bot@github-actions.com"
+          git config --global user.name "Blog Automation Bot 🤖"
+
+      # ── 6. Commit and Push Updated Posts & Images ───────────
+      - name: 📝 Commit & Push Regenerated Posts
+        run: |
+          git add _posts/ assets/images/
+          if git diff --staged --quiet; then
+            echo "No new files to commit."
+          else
+            git commit -m "chore: regenerate existing posts with v1.9.0 quality standards and cover images"
+            git push origin main
+          fi

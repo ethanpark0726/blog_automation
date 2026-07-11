@@ -6,6 +6,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.9.1] — 2026-07-11
+
+### Added
+- **One-Click Post Regeneration Workflow**: Created a manual trigger system to retroactively upgrade all existing posts to `v1.9.0` depth and image styling.
+  - **`scripts/regenerate_posts.py`**: A python script that clears all old markdown files in `_posts/` and loops through the original topics (Adobe Architecture, Solar System, CrossFit) to run the upgraded multi-agent generation pipeline.
+  - **`.github/workflows/regenerate.yml`**: A GitHub Actions workflow triggered via `workflow_dispatch` (manual button in GitHub UI) to execute the regeneration script in the secure GitHub environment and commit updated posts and images.
+
+---
+
 ## [1.9.0] — 2026-07-11
 
 ### Added
