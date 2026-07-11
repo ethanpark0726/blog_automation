@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import time
 
 # The 3 original topics to regenerate under v1.9.0 quality guidelines
 TOPICS = [
@@ -43,6 +44,14 @@ def main():
         print(result.stdout)
         if result.stderr:
             print("Errors/Warnings:", result.stderr)
+            
+        if result.returncode != 0:
+            print(f"❌ Error: Post generation failed for topic '{topic}'!")
+            sys.exit(1)
+            
+        # Cooldown delay of 10 seconds between topics to prevent hitting API rate limits
+        print("Cooling down for 10 seconds...")
+        time.sleep(10)
 
     print("\n🎉 Post regeneration completed successfully!")
 

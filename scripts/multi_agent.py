@@ -73,6 +73,8 @@ def send_telegram(chat_id: str, text: str) -> None:
 
 def call_gemini(prompt: str, retry: int = 3) -> str:
     """Call the Gemini API (with retry logic)"""
+    # Safe delay of 5 seconds to avoid exceeding the 15 RPM rate limit of the free tier
+    time.sleep(5)
     for attempt in range(retry):
         try:
             response = model.generate_content(prompt)

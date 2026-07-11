@@ -6,6 +6,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.9.2] — 2026-07-11
+
+### Fixed
+- **Regeneration Rate-Limit & Git Crash Mitigation**: Corrected workflow execution issues on large batch generations.
+  - Added a global `time.sleep(5)` delay before all Gemini calls in `call_gemini` and a `time.sleep(10)` delay between topics in `regenerate_posts.py` to prevent hitting the 15 RPM Free Tier rate limit.
+  - Made the git staging step in `regenerate.yml` robust to avoid crashing with `fatal: pathspec` when `assets/images/` is missing on the filesystem.
+  - Configured `regenerate_posts.py` to propagate subprocess failures to the CI runner by checking exit codes, ensuring the action fails correctly on error.
+
+---
+
 ## [1.9.1] — 2026-07-11
 
 ### Added
