@@ -47,7 +47,12 @@ async function handleRequest(request) {
   const text = message?.text;
 
   // ── Security: Only process allowed chat IDs ──────────────────
-  if (ALLOWED_CHAT_ID && chatId !== String(ALLOWED_CHAT_ID)) {
+  if (!ALLOWED_CHAT_ID || ALLOWED_CHAT_ID.trim() === "") {
+    console.error("Security Warning: ALLOWED_CHAT_ID is not configured. Requests are blocked by default.");
+    return new Response("Forbidden: Worker environment not secure (missing ALLOWED_CHAT_ID)", { status: 403 });
+  }
+
+  if (chatId !== String(ALLOWED_CHAT_ID).trim()) {
     console.log(`Blocked request from unauthorized chat_id: ${chatId}`);
     // Return 200 OK to Telegram (to prevent infinite retries)
     return new Response(JSON.stringify({ ok: true }), {

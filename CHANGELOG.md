@@ -6,6 +6,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.6.3] — 2026-07-11
+
+### Fixed
+- **Cloudflare Worker Security Hardening**: Made the `ALLOWED_CHAT_ID` environment variable check mandatory in `worker.js`.
+  - Previously, if the variable was undefined or empty, it allowed any Telegram chat to trigger dispatches. It now safely blocks requests and throws a 403 Forbidden error if this variable is unconfigured or empty.
+  - Trimmed inputs to prevent validation mismatches from trailing/leading whitespace.
+
+---
+
 ## [1.6.2] — 2026-07-11
 
 ### Changed
