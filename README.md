@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.10.1-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.11.0-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -192,7 +192,7 @@ Auto-generates Jekyll Front Matter and saves to `_posts/ko/` and `_posts/en/`.
 
 ## 📊 Current Version
 
-**v1.10.1** — Fixed metadata parser bug and manually cleaned up unremoved JSON block from Solar System post.
+**v1.11.0** — Integrated global client-side search in navigation header with real-time list filtering.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -200,7 +200,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 
 ## 🗺️ Roadmap
 
-- **`[x]` v1.10.0**: Deep Content Expansion & rate limit mitigations
+- **`[x]` v1.11.0**: Global Client-Side Search
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 
 ---

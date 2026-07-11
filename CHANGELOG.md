@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.11.0] — 2026-07-11
+
+### Added
+- **Global Client-Side Search Engine**: Implemented an elegant search bar in the header navigation that filters post titles, excerpts, and tags in real-time.
+  - **Auto-expansion**: Search input expands smoothly from 130px to 190px on focus.
+  - **Unified Filtering**: Integrates with language tags so users can filter by language and search query simultaneously.
+  - **Smart Detail-Page Redirects**: If a user initiates a search while on a post detail page, pressing Enter seamlessly redirects them to the home page with a `?q=query` parameter, which is auto-parsed and filtered on load.
+  - **No-Results Empty State**: Dynamic, stylized placeholder overlay indicating when no posts match search criteria.
+
+---
+
 ## [1.10.1] — 2026-07-11
 
 ### Fixed

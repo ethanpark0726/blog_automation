@@ -177,6 +177,8 @@ layout: default
     currentFilter = lang;
     const cards = document.querySelectorAll('.post-card');
     const tabs = document.querySelectorAll('.tab-btn');
+    const searchInput = document.getElementById('globalSearchInput');
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
 
     // Update active tab
     tabs.forEach(t => {
@@ -185,13 +187,24 @@ layout: default
 
     // Filter post cards with fade animation
     cards.forEach(card => {
-      if (lang === 'all' || card.dataset.lang === lang) {
+      const cardLang = card.dataset.lang;
+      
+      const title = card.querySelector('.post-title').textContent.toLowerCase();
+      const excerptEl = card.querySelector('.post-excerpt');
+      const excerpt = excerptEl ? excerptEl.textContent.toLowerCase() : '';
+      const tags = Array.from(card.querySelectorAll('.post-tags .tag'))
+                       .map(t => t.textContent.toLowerCase())
+                       .join(' ');
+
+      const matchesLang = (lang === 'all' || cardLang === lang);
+      const matchesSearch = !query || 
+                            title.includes(query) || 
+                            excerpt.includes(query) || 
+                            tags.includes(query);
+
+      if (matchesLang && matchesSearch) {
         card.style.display = 'flex';
-        card.style.opacity = '0';
-        requestAnimationFrame(() => {
-          card.style.transition = 'opacity 0.3s ease';
-          card.style.opacity = '1';
-        });
+        card.style.opacity = '1';
       } else {
         card.style.display = 'none';
       }
@@ -206,6 +219,25 @@ layout: default
         item.style.display = 'none';
       }
     });
+
+    // Manage Empty Search State
+    const visibleCards = Array.from(cards).filter(c => c.style.display !== 'none');
+    let emptyState = document.getElementById('searchEmptyState');
+    if (visibleCards.length === 0 && cards.length > 0) {
+      if (!emptyState) {
+        emptyState = document.createElement('div');
+        emptyState.id = 'searchEmptyState';
+        emptyState.className = 'empty-state';
+        emptyState.style.padding = '40px 20px';
+        emptyState.innerHTML = '<p style="font-size: 1.2rem; color: var(--text-primary); margin-bottom: 8px;">🔍 No matching posts found.</p><p style="color: var(--text-secondary); font-size: 0.9rem;">Try searching for different keywords, categories, or tags.</p>';
+        const postGrid = document.getElementById('postGrid');
+        if (postGrid) postGrid.appendChild(emptyState);
+      } else {
+        emptyState.style.display = 'block';
+      }
+    } else if (emptyState) {
+      emptyState.style.display = 'none';
+    }
 
     // Store preference
     try { localStorage.setItem('blog_lang', lang); } catch(e) {}

@@ -17,7 +17,12 @@
       <a href="{{ '/' | relative_url }}" class="site-logo">
         📚 <span>{{ site.title }}</span>
       </a>
-      <nav class="header-nav">
+      <nav class="header-nav" style="display: flex; align-items: center; gap: 16px;">
+        <!-- Global Search Bar -->
+        <div class="header-search" style="position: relative; display: flex; align-items: center;">
+          <input type="text" id="globalSearchInput" placeholder="Search..." style="padding: 6px 12px 6px 28px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); border-radius: 999px; color: var(--text-primary); font-size: 0.85rem; outline: none; transition: all 0.25s ease; width: 130px;" onfocus="this.style.borderColor='var(--accent)'; this.style.width='190px';" onblur="if(!this.value){this.style.borderColor='var(--border)'; this.style.width='130px';}">
+          <span style="position: absolute; left: 8px; color: var(--text-secondary); font-size: 0.8rem; pointer-events: none; top: 50%; transform: translateY(-50%);">🔍</span>
+        </div>
         <a href="{{ '/' | relative_url }}">Home</a>
         <a href="{{ '/trivia/' | relative_url }}">💡 Trivia</a>
         <a href="{{ '/engineer/' | relative_url }}">👨‍💻 Engineer</a>
@@ -74,6 +79,93 @@
     });
   </script>
   {% endif %}
+
+  <!-- ── Global Client-Side Search Script ────────────────── -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchInput = document.getElementById('globalSearchInput');
+      if (!searchInput) return;
+
+      // 1. URL Query Parameter Auto-population
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryParam = urlParams.get('q');
+      if (queryParam) {
+        searchInput.value = queryParam;
+        setTimeout(() => {
+          triggerSearch(queryParam);
+        }, 100);
+      }
+
+      // 2. Real-time Search Input Listener
+      searchInput.addEventListener('input', (e) => {
+        triggerSearch(e.target.value);
+      });
+
+      // 3. Enter Key Redirect (from detail pages to home page search)
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const query = e.target.value.trim();
+          const isOnList = document.getElementById('postGrid') !== null;
+          if (!isOnList) {
+            window.location.href = "{{ '/' | relative_url }}?q=" + encodeURIComponent(query);
+          }
+        }
+      });
+
+      function triggerSearch(query) {
+        const cleanQuery = query.toLowerCase().trim();
+        const postGrid = document.getElementById('postGrid');
+        if (!postGrid) return;
+
+        const cards = postGrid.querySelectorAll('.post-card');
+        let currentLang = 'all';
+        try { currentLang = localStorage.getItem('blog_lang') || 'all'; } catch(e) {}
+
+        cards.forEach(card => {
+          const cardLang = card.dataset.lang;
+          
+          // Extrapolate fields to search against
+          const title = card.querySelector('.post-title').textContent.toLowerCase();
+          const excerptEl = card.querySelector('.post-excerpt');
+          const excerpt = excerptEl ? excerptEl.textContent.toLowerCase() : '';
+          const tags = Array.from(card.querySelectorAll('.post-tags .tag'))
+                           .map(t => t.textContent.toLowerCase())
+                           .join(' ');
+
+          const matchesLang = (currentLang === 'all' || cardLang === currentLang);
+          const matchesSearch = !cleanQuery || 
+                                title.includes(cleanQuery) || 
+                                excerpt.includes(cleanQuery) || 
+                                tags.includes(cleanQuery);
+
+          if (matchesLang && matchesSearch) {
+            card.style.display = 'flex';
+            card.style.opacity = '1';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+
+        // Manage Empty Search State
+        const visibleCards = Array.from(cards).filter(c => c.style.display !== 'none');
+        let emptyState = document.getElementById('searchEmptyState');
+        if (visibleCards.length === 0 && cards.length > 0) {
+          if (!emptyState) {
+            emptyState = document.createElement('div');
+            emptyState.id = 'searchEmptyState';
+            emptyState.className = 'empty-state';
+            emptyState.style.padding = '40px 20px';
+            emptyState.innerHTML = '<p style="font-size: 1.2rem; color: var(--text-primary); margin-bottom: 8px;">🔍 No matching posts found.</p><p style="color: var(--text-secondary); font-size: 0.9rem;">Try searching for different keywords, categories, or tags.</p>';
+            postGrid.appendChild(emptyState);
+          } else {
+            emptyState.style.display = 'block';
+          }
+        } else if (emptyState) {
+          emptyState.style.display = 'none';
+        }
+      }
+    });
+  </script>
 
 </body>
 </html>
