@@ -4,6 +4,26 @@ layout: default
 
 <div class="layout-wrapper">
   <main class="main-content" style="max-width: 800px; margin: 0 auto;">
+
+    <!-- Translation Switch Banner -->
+    {% if page.topic_id %}
+      {% assign pair_lang = 'en' %}
+      {% if page.lang == 'en' %}{% assign pair_lang = 'ko' %}{% endif %}
+      {% for p in site.posts %}
+        {% if p.topic_id == page.topic_id and p.lang == pair_lang %}
+          <a href="{{ p.url | relative_url }}" class="translation-banner">
+            {% if pair_lang == 'ko' %}
+              🇰🇷 이 글을 한국어로 읽기 — {{ p.title | truncate: 50 }}
+            {% else %}
+              🇺🇸 Read this post in English — {{ p.title | truncate: 50 }}
+            {% endif %}
+            <span class="translation-arrow">→</span>
+          </a>
+          {% break %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
     <article class="post-card" style="cursor: default; padding: 32px; gap: 20px;">
       <div class="post-card-top">
         <div class="post-badges">

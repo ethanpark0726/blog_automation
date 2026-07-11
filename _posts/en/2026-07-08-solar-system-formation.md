@@ -10,6 +10,7 @@ tags:
   - nebula
   - creation
 lang: en
+topic_id: "solar-system-formation"
 description: "Solar System Formation에 대한 블로그 포스트"
 ---
 

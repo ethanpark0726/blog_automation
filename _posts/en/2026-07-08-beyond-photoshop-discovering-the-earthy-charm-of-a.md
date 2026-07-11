@@ -11,6 +11,7 @@ tags:
   - Traditional Architecture
   - Thermal Mass
 lang: en
+topic_id: "adobe-architecture"
 description: "Unpack the sustainable secrets of Adobe architecture, from its sun-dried mud bricks to its natural air conditioning, in a friendly, dad-mode guide."
 ---
 

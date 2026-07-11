@@ -6,6 +6,27 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.6.0] — 2026-07-11
+
+### Added
+- **Smart i18n Language Handling**: Completely revamped multilingual content display to eliminate duplicate post clutter on the main feed.
+  - **Browser language auto-detection**: Automatically filters posts to match the user's browser language (Korean → KO posts, English → EN posts) on page load.
+  - **`localStorage` preference persistence**: Once a user selects a language, the preference is stored and remembered across visits.
+  - **`topic_id` post pairing system**: KO/EN posts of the same topic are now linked via a shared `topic_id` front matter field.
+  - **Translation switch banner**: Each post detail page shows a prominent banner at the top to switch to the paired translation (e.g., "🇺🇸 Read this post in English").
+  - **Inline pair links**: Post cards on the home feed and category pages show a small language toggle badge linking to the paired translation.
+  - **Fade-in animation**: Smooth opacity transition when switching language filters.
+- **`scripts/add_topic_id.py`**: Migration script to retroactively add `topic_id` to all 6 existing posts.
+
+### Changed
+- **`_layouts/home.html`**: Replaced static filter logic with auto-detect + animated filter system; added `data-lang` attributes for sidebar recent posts filtering.
+- **`_layouts/post.html`**: Added translation banner component using Liquid `topic_id` matching.
+- **`trivia.md` / `engineer.md`**: Added language filter tabs with auto-detect, matching main feed UX.
+- **`scripts/multi_agent.py`**: `FileWriterAgent` now generates a shared `topic_id` for each KO/EN post pair.
+- **`assets/css/custom.css`**: Added `.translation-banner` and `.pair-link-inline` styles with gradient backgrounds and hover animations.
+
+---
+
 ## [1.5.0] — 2026-07-10
 
 ### Changed

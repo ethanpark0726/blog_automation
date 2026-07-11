@@ -412,6 +412,61 @@ a:hover { color: #86EFAC; text-decoration: none; }
   font-size: 0.85rem;
 }
 
+/* ── Translation Banner (Post Detail) ──────────────────── */
+.translation-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.08) 0%, rgba(96, 165, 250, 0.08) 100%);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-size: .9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all .25s ease;
+}
+.translation-banner:hover {
+  background: linear-gradient(135deg, rgba(74, 222, 128, 0.15) 0%, rgba(96, 165, 250, 0.15) 100%);
+  border-color: var(--accent);
+  box-shadow: 0 4px 20px rgba(74, 222, 128, 0.15);
+  transform: translateY(-1px);
+  text-decoration: none;
+  color: #86EFAC;
+}
+.translation-arrow {
+  font-size: 1.1rem;
+  transition: transform .2s ease;
+}
+.translation-banner:hover .translation-arrow {
+  transform: translateX(4px);
+}
+
+/* ── Inline Pair Link (Home Feed) ──────────────────────── */
+.pair-link-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  text-decoration: none;
+  transition: all .2s ease;
+  align-self: flex-start;
+}
+.pair-link-inline:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-light);
+  text-decoration: none;
+}
+
 /* ── Footer ─────────────────────────────────────────────── */
 .site-footer {
   text-align: center;

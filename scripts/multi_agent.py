@@ -361,6 +361,13 @@ class FileWriterAgent:
         category = "Trivia" if mode == "trivia" else "Engineer"
         keywords = classification.get("keywords", [])
         
+        # Generate a shared topic_id for KO/EN post pairing
+        topic_en = classification.get("topic_en", "post")
+        topic_id = re.sub(r"[^\w\s-]", "", topic_en.lower())
+        topic_id = re.sub(r"[\s_]+", "-", topic_id).strip("-")[:40]
+        if not topic_id:
+            topic_id = f"topic-{date_str}"
+        
         created_files = []
         
         for lang, content in posts.items():
@@ -388,6 +395,7 @@ categories: [{category}]
 tags:
 {tags_yaml}
 lang: {lang}
+topic_id: "{topic_id}"
 description: "{self._escape_yaml(description)}"
 ---
 
