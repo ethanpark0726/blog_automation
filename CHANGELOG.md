@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.10.0] — 2026-07-11
+
+### Added
+- **Deep Content Expansion**: Preserved the content quality upgrades.
+  - Target writing length constraints expanded to KOR `3000-5000 characters` and ENG `1200-2000 words`.
+  - Mandatory structural sections: Step-by-step logic/architecture explanations, code/config snippets, comparison markdown tables, and historical context are generated for all new posts.
+  - ScholarlySearchAgent enriches facts to a larger pool of `1500-3000 characters`.
+- **API Cooldown Delays**: Maintained rate limit mitigations of 5s on Gemini calls and 10s between posts in batch scripts to protect the Free Tier from 429 errors.
+
+### Removed
+- **Automated Cover Image Generation (Reversion to v1.8.1 UI)**: Reverted the experimental image generation and template changes to restore clean text-based layouts.
+  - Deleted `.post-card-image` and `.post-cover-image` layouts from `post.html`, `home.html`, `trivia.md`, `engineer.md`, and `custom.css`.
+  - Removed image creation calls and front matter image properties from the python agents pipeline.
+
+---
+
 ## [1.9.2] — 2026-07-11
 
 ### Fixed

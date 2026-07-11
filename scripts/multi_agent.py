@@ -212,65 +212,6 @@ def search_wikipedia(query: str) -> str:
         return f"Wikipedia Search Error: {e}"
 
 
-def generate_post_image(prompt_text: str, mode: str, output_path: Path) -> bool:
-    """Generate a post cover image using Gemini Imagen 3, or fallback to Unsplash redirect search"""
-    print(f"\n[ImageAgent] Generating cover image for: '{prompt_text}' (mode: {mode})...")
-    
-    # Choose style based on post mode
-    if mode == "trivia":
-        # Style B: Photorealistic scene / conceptual photography
-        style_prompt = f"A photorealistic, highly detailed, modern 16:9 featured blog cover image, cinematic lighting, conceptual studio shot, representing: {prompt_text}"
-    else:
-        # Style A: Minimalist tech / clean 3D illustration / code art
-        style_prompt = f"A professional, minimalist tech illustration or clean 3D render, dark background, neon accents, 16:9 aspect ratio, depicting: {prompt_text}"
-        
-    try:
-        # Attempt Google Imagen 3 generation
-        model = genai.ImageGenerationModel("imagen-3.0-generate-002")
-        result = model.generate_images(
-            prompt=style_prompt,
-            number_of_images=1,
-            output_mime_type="image/png",
-            aspect_ratio="16:9"
-        )
-        if result.images:
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            result.images[0].image.save(output_path)
-            print(f"[ImageAgent] Cover image successfully generated via Imagen 3: {output_path}")
-            return True
-    except Exception as e:
-        print(f"[ImageAgent] Imagen 3 generation failed: {e}. Falling back to Unsplash stock photo...")
-        
-    # Fallback to Unsplash
-    try:
-        keywords = urllib.parse.quote(prompt_text.split()[0] if prompt_text.split() else "technology")
-        url = f"https://images.unsplash.com/featured/1200x675/?{keywords}"
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            image_data = resp.read()
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(output_path, "wb") as f:
-                f.write(image_data)
-            print(f"[ImageAgent] Unsplash fallback cover image downloaded: {output_path}")
-            return True
-    except Exception as ex:
-        print(f"[ImageAgent] Unsplash fallback failed: {ex}. Using default tech cover image.")
-        try:
-            url = "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=675&fit=crop"
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                image_data = resp.read()
-                output_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(output_path, "wb") as f:
-                    f.write(image_data)
-                print(f"[ImageAgent] Default tech cover image saved: {output_path}")
-                return True
-        except Exception as ex2:
-            print(f"[ImageAgent] Fatal fallback image error: {ex2}")
-            
-    return False
-
-
 # ═══════════════════════════════════════════════════════════════════════════
 # Agent 1: ClassifierAgent
 # ═══════════════════════════════════════════════════════════════════════════
@@ -664,11 +605,6 @@ class FileWriterAgent:
         topic_id = re.sub(r"[\s_]+", "-", topic_id).strip("-")[:40]
         if not topic_id:
             topic_id = f"topic-{date_str}"
-            
-        # Generate cover image for the topic
-        image_filename = f"{date_str}-{topic_id}.png"
-        image_path = Path(f"assets/images/{image_filename}")
-        generate_post_image(topic_en, mode, image_path)
         
         created_files = []
         
@@ -698,7 +634,6 @@ tags:
 {tags_yaml}
 lang: {lang}
 topic_id: "{topic_id}"
-image: "/assets/images/{image_filename}"
 description: "{self._escape_yaml(description)}"
 ---
 

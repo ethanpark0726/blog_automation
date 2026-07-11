@@ -46,16 +46,13 @@ jobs:
           git config --global user.email "blog-bot@github-actions.com"
           git config --global user.name "Blog Automation Bot 🤖"
 
-      # ── 6. Commit and Push Updated Posts & Images ───────────
+      # ── 6. Commit and Push Updated Posts ───────────────────
       - name: 📝 Commit & Push Regenerated Posts
         run: |
           git add _posts/
-          if [ -d assets/images ]; then
-            git add assets/images/
-          fi
           if git diff --staged --quiet; then
             echo "No new files to commit."
           else
-            git commit -m "chore: regenerate existing posts with v1.9.0 quality standards and cover images"
+            git commit -m "chore: regenerate existing posts with quality standards"
             git push origin main
           fi

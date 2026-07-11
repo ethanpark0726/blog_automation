@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.9.2-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.10.0-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -192,7 +192,7 @@ Auto-generates Jekyll Front Matter and saves to `_posts/ko/` and `_posts/en/`.
 
 ## 📊 Current Version
 
-**v1.9.2** — Added rate limit mitigation delays and robust git staging to post regeneration workflow.
+**v1.10.0** — Expanded blog post length/depth (Deep Content Expansion) and integrated rate limit mitigation delays.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -200,7 +200,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 
 ## 🗺️ Roadmap
 
-- **`[x]` v1.9.0**: Integrate Imagen 3 image generation & expand content length guidelines
+- **`[x]` v1.10.0**: Deep Content Expansion & rate limit mitigations
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 
 ---
