@@ -467,6 +467,23 @@ a:hover { color: #86EFAC; text-decoration: none; }
   text-decoration: none;
 }
 
+/* ── Mermaid Diagrams ───────────────────────────────────── */
+.mermaid {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(30, 30, 36, 0.4);
+  border: 1px solid var(--border);
+  padding: 24px;
+  border-radius: var(--radius);
+  margin: 28px 0;
+  overflow-x: auto;
+}
+.mermaid svg {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
 /* ── Footer ─────────────────────────────────────────────── */
 .site-footer {
   text-align: center;

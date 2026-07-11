@@ -32,5 +32,48 @@
     <p>Tech & Knowledge | Handcrafted Insights on Tech, Science, and Everyday Wisdom.</p>
   </footer>
 
+  {% if content contains 'language-mermaid' %}
+  <!-- ── Mermaid Diagram Rendering ──────────────────────── -->
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      themeVariables: {
+        background: '#1E1E24',
+        primaryColor: '#1E1E24',
+        primaryTextColor: '#F3F4F6',
+        lineColor: '#4ADE80',
+        textColor: '#F3F4F6',
+        nodeBorder: '#4ADE80',
+        mainBkg: '#1E1E24'
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", async function() {
+      const targets = document.querySelectorAll('.language-mermaid');
+      targets.forEach(target => {
+        // Climb up the DOM tree to replace the outermost code block container
+        let toReplace = target;
+        while (toReplace.parentNode && 
+               (toReplace.parentNode.tagName === 'PRE' || 
+                toReplace.parentNode.classList.contains('highlight') || 
+                toReplace.parentNode.classList.contains('highlighter-rouge'))) {
+          toReplace = toReplace.parentNode;
+        }
+        
+        const codeText = target.textContent.trim();
+        const mermaidDiv = document.createElement('div');
+        mermaidDiv.className = 'mermaid';
+        mermaidDiv.textContent = codeText;
+        
+        toReplace.parentNode.replaceChild(mermaidDiv, toReplace);
+      });
+      
+      await mermaid.run();
+    });
+  </script>
+  {% endif %}
+
 </body>
 </html>

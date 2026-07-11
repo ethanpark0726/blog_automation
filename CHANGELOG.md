@@ -6,6 +6,15 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.6.1] — 2026-07-11
+
+### Fixed
+- **Client-side Mermaid Diagram Rendering**: Integrated client-side Mermaid.js rendering engine in `_layouts/default.html` to dynamic-parse and draw SVG block diagrams from raw markdown ` ```mermaid ` tags.
+  - Custom styling in `custom.css` ensures diagrams are centered, fully responsive (mobile-friendly), and wrap cleanly in Dark Tech Theme cards.
+  - Conditional load logic prevents loading Mermaid JS assets on pages that do not contain diagrams, optimizing speed.
+
+---
+
 ## [1.6.0] — 2026-07-11
 
 ### Added
