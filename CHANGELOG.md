@@ -6,6 +6,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.8.1] — 2026-07-11
+
+### Fixed
+- **ScholarlySearchAgent NameError**: Fixed a bug where `SearchAgent` was not fully replaced during previous refactoring, causing a runtime `NameError` crash when the pipeline initialized `ScholarlySearchAgent()`.
+- **Pre-commit Checklist Verification**: Updated [CONTRIBUTING.md](CONTRIBUTING.md) to add a mandatory verification checklist requiring syntax check compilation tests (`python -m py_compile`) and clean code replacements review before staging and pushing.
+
+---
+
 ## [1.8.0] — 2026-07-11
 
 ### Added

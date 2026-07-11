@@ -76,3 +76,15 @@ docs:     Documentation only
 config:   Configuration change
 refactor: Code refactor (no behavior change)
 ```
+
+---
+
+## 🛡️ Verification Checklist Before Pushing
+
+Before committing and pushing any code changes, always perform these validation checks:
+1. **Syntax & Compilation Check**:
+   - Run `python -m py_compile scripts/multi_agent.py` to ensure that python scripts have no syntax errors or unresolved symbols.
+2. **Verify Tool Application**:
+   - Check if all code replacement chunks applied completely and cleanly without warnings.
+3. **Markdown Conformity**:
+   - Make sure all newly added Jekyll front matter variables and page formatting guidelines are followed.

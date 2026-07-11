@@ -254,31 +254,66 @@ Response format:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Agent 2: SearchAgent
+# Agent 2: ScholarlySearchAgent
 # ═══════════════════════════════════════════════════════════════════════════
-class SearchAgent:
+class ScholarlySearchAgent:
     def run(self, classification: dict) -> str:
+        mode = classification.get("mode", "engineer")
         query = classification.get("search_query", classification.get("topic_en", ""))
-        print(f"\n[SearchAgent] Collecting information: '{query}'")
+        print(f"\n[ScholarlySearchAgent] Collecting information for '{query}' (mode: {mode})...")
         
-        facts = search_duckduckgo(query)
-        print(f"[SearchAgent] Collection complete:\n{facts[:300]}...")
+        facts = []
         
-        # Enrich collected facts with Gemini's own knowledge
+        # General baseline search
+        ddg_baseline = search_duckduckgo(query)
+        if "Search API error" not in ddg_baseline and ddg_baseline.strip():
+            facts.append("=== Web Summary (DuckDuckGo) ===\n" + ddg_baseline)
+        
+        wiki_data = search_wikipedia(query)
+        if "Wikipedia Search Error" not in wiki_data and wiki_data.strip():
+            facts.append("=== Authoritative Reference (Wikipedia) ===\n" + wiki_data)
+            
+        if mode == "trivia":
+            # Trivia mode: google books
+            books_data = search_google_books(query)
+            if "Google Books Search Error" not in books_data and books_data.strip():
+                facts.append("=== Book References (Google Books) ===\n" + books_data)
+        else:
+            # Engineer mode: arXiv, Crossref, and Cisco/Arista/standards vendor references
+            arxiv_data = search_arxiv(query)
+            if "arXiv Search Error" not in arxiv_data and arxiv_data.strip():
+                facts.append("=== Academic Literature (arXiv) ===\n" + arxiv_data)
+                
+            crossref_data = search_crossref(query)
+            if "Crossref Search Error" not in crossref_data and crossref_data.strip():
+                facts.append("=== Scholarly Publications (Crossref) ===\n" + crossref_data)
+                
+            # Vendor whitepaper search via DuckDuckGo
+            vendor_query = f"{query} (site:cisco.com OR site:arista.com OR site:ietf.org OR site:rfc-editor.org)"
+            vendor_ddg = search_duckduckgo(vendor_query)
+            if "Search API error" not in vendor_ddg and vendor_ddg.strip() and "No search results" not in vendor_ddg:
+                facts.append("=== Vendor Whitepapers & Standards (Cisco/Arista/IETF) ===\n" + vendor_ddg)
+        
+        combined_facts = "\n\n".join(facts)
+        print(f"[ScholarlySearchAgent] Collection complete (length: {len(combined_facts)} chars)")
+        
+        # Enrich collected facts with Gemini
         enrich_prompt = f"""
-Summarize fact-based information about the following topic.
+Summarize fact-based information about the following topic based on the provided reference sources.
 
 Topic: {classification.get('topic_ko', '')} ({classification.get('topic_en', '')})
-Search results: {facts}
+Collected reference facts:
+{combined_facts}
 
-Write accurate background information (no fabrication) covering the following, in 200-400 characters:
-1. Core concept definition
-2. Key characteristics or principles (2-3 items)
-3. Real-world use cases or current status
+Write accurate background information (no fabrication) covering the following, in 500-1000 characters:
+1. Core concept definition & scientific/technical background
+2. Key characteristics, principles, or architectures (3-4 items)
+3. Real-world use cases, vendor implementations, or current status
+4. Explicitly list the Titles and URLs/Links of the sources found in the reference facts above so we can cite them.
 """
         enriched = call_gemini(enrich_prompt)
-        print(f"[SearchAgent] Information enrichment complete")
-        return enriched
+        print(f"[ScholarlySearchAgent] Information enrichment complete")
+        return combined_facts + "\n\n=== Enriched Summary ===\n" + enriched
 
 
 # ═══════════════════════════════════════════════════════════════════════════

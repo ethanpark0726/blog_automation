@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.8.0-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.8.1-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -192,7 +192,7 @@ Auto-generates Jekyll Front Matter and saves to `_posts/ko/` and `_posts/en/`.
 
 ## 📊 Current Version
 
-**v1.8.0** — Integrated scholarly references (arXiv, Crossref, Google Books) and added FactVerifierAgent.
+**v1.8.1** — Fixed ScholarlySearchAgent runtime import crash and updated pre-commit checklist.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
