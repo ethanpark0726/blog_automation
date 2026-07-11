@@ -25,6 +25,11 @@ description: "A curated storage of general knowledge, interesting science facts,
         <div class="post-list" id="postGrid">
           {% for post in trivia_posts %}
             <article class="post-card" data-lang="{{ post.lang }}">
+              {% if post.image %}
+                <div class="post-card-image">
+                  <img src="{{ post.image | relative_url }}" alt="{{ post.title }}">
+                </div>
+              {% endif %}
               <div class="post-card-top">
                 <div class="post-badges">
                   <span class="lang-badge lang-{{ post.lang }}">

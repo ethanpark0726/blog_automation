@@ -25,6 +25,11 @@ description: "A collection of Engineer Mode posts with in-depth technical analys
         <div class="post-list" id="postGrid">
           {% for post in eng_posts %}
             <article class="post-card" data-lang="{{ post.lang }}">
+              {% if post.image %}
+                <div class="post-card-image">
+                  <img src="{{ post.image | relative_url }}" alt="{{ post.title }}">
+                </div>
+              {% endif %}
               <div class="post-card-top">
                 <div class="post-badges">
                   <span class="lang-badge lang-{{ post.lang }}">

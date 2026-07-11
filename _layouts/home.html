@@ -19,6 +19,11 @@ layout: default
     <div class="post-grid" id="postGrid">
       {% for post in site.posts %}
         <article class="post-card" data-lang="{{ post.lang }}" data-category="{{ post.categories | first | downcase }}" data-topic="{{ post.topic_id }}">
+          {% if post.image %}
+            <div class="post-card-image">
+              <img src="{{ post.image | relative_url }}" alt="{{ post.title }}">
+            </div>
+          {% endif %}
           <div class="post-card-top">
             <div class="post-badges">
               <span class="lang-badge lang-{{ post.lang }}">

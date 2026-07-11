@@ -210,6 +210,65 @@ def search_wikipedia(query: str) -> str:
         return f"Wikipedia Search Error: {e}"
 
 
+def generate_post_image(prompt_text: str, mode: str, output_path: Path) -> bool:
+    """Generate a post cover image using Gemini Imagen 3, or fallback to Unsplash redirect search"""
+    print(f"\n[ImageAgent] Generating cover image for: '{prompt_text}' (mode: {mode})...")
+    
+    # Choose style based on post mode
+    if mode == "trivia":
+        # Style B: Photorealistic scene / conceptual photography
+        style_prompt = f"A photorealistic, highly detailed, modern 16:9 featured blog cover image, cinematic lighting, conceptual studio shot, representing: {prompt_text}"
+    else:
+        # Style A: Minimalist tech / clean 3D illustration / code art
+        style_prompt = f"A professional, minimalist tech illustration or clean 3D render, dark background, neon accents, 16:9 aspect ratio, depicting: {prompt_text}"
+        
+    try:
+        # Attempt Google Imagen 3 generation
+        model = genai.ImageGenerationModel("imagen-3.0-generate-002")
+        result = model.generate_images(
+            prompt=style_prompt,
+            number_of_images=1,
+            output_mime_type="image/png",
+            aspect_ratio="16:9"
+        )
+        if result.images:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            result.images[0].image.save(output_path)
+            print(f"[ImageAgent] Cover image successfully generated via Imagen 3: {output_path}")
+            return True
+    except Exception as e:
+        print(f"[ImageAgent] Imagen 3 generation failed: {e}. Falling back to Unsplash stock photo...")
+        
+    # Fallback to Unsplash
+    try:
+        keywords = urllib.parse.quote(prompt_text.split()[0] if prompt_text.split() else "technology")
+        url = f"https://images.unsplash.com/featured/1200x675/?{keywords}"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            image_data = resp.read()
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_path, "wb") as f:
+                f.write(image_data)
+            print(f"[ImageAgent] Unsplash fallback cover image downloaded: {output_path}")
+            return True
+    except Exception as ex:
+        print(f"[ImageAgent] Unsplash fallback failed: {ex}. Using default tech cover image.")
+        try:
+            url = "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=675&fit=crop"
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                image_data = resp.read()
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(output_path, "wb") as f:
+                    f.write(image_data)
+                print(f"[ImageAgent] Default tech cover image saved: {output_path}")
+                return True
+        except Exception as ex2:
+            print(f"[ImageAgent] Fatal fallback image error: {ex2}")
+            
+    return False
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Agent 1: ClassifierAgent
 # ═══════════════════════════════════════════════════════════════════════════
@@ -305,7 +364,7 @@ Topic: {classification.get('topic_ko', '')} ({classification.get('topic_en', '')
 Collected reference facts:
 {combined_facts}
 
-Write accurate background information (no fabrication) covering the following, in 500-1000 characters:
+Write accurate background information (no fabrication) covering the following, in 1500-3000 characters:
 1. Core concept definition & scientific/technical background
 2. Key characteristics, principles, or architectures (3-4 items)
 3. Real-world use cases, vendor implementations, or current status
@@ -328,16 +387,22 @@ class WriterAgent:
         ko_style = self._get_ko_style(mode)
         ko_prompt = f"""
 You are a professional tech blogger. Write a blog post in Korean on the following topic.
+The post must be highly detailed, comprehensive, and structured as an in-depth article.
 
 Topic: {query}
 Reference facts: {facts}
 {ko_style}
 
-**Required Format Rules:**
+**Required Format & Content Rules (KOR):**
+- Length: 3000-5000 characters (including markdown) for deep, comprehensive coverage. Do NOT summarize or write briefly.
 - No H1 title (it goes into Front Matter separately)
 - Use ## or ### for subheadings
 - Use **bold** or `code` for emphasis
 - Use > blockquotes for key insights
+- Include a detailed step-by-step technical mechanism or conceptual process breakdown.
+- Include concrete code examples (with syntax highlighting), config snippets, or mathematical formulas.
+- Include a comparison/evaluation markdown table (e.g. Pros & Cons, or feature comparison).
+- Include historical context, origins, or real-world background.
 - For technical topics, include at least 1 Mermaid diagram:
   ```mermaid
   graph TD
@@ -347,8 +412,6 @@ Reference facts: {facts}
   Parentheses (), Korean characters, and special chars cause parse errors — always write like this:
   Correct: `A["Sun-dried (adobe brick)"]`
   Wrong:   `A[Sun-dried (adobe brick)]`
-- Length: 700-1200 characters (including markdown)
-- Maintain structure: Introduction, Body (2-3 sections), Conclusion
 
 **SEO Meta (at the end as JSON):**
 ```json_meta
@@ -361,16 +424,22 @@ Reference facts: {facts}
         en_style = self._get_en_style(mode)
         en_prompt = f"""
 You are a professional tech blogger. Write a blog post in natural, fluent English on the following topic.
+The post must be an in-depth, comprehensive technical article.
 
 Topic: {query}
 Reference facts: {facts}
 {en_style}
 
-**Required Format Rules:**
+**Required Format & Content Rules (ENG):**
+- Length: 1200-2000 words. Provide rich, detailed explanations. Do NOT summarize or write briefly.
 - No H1 title (it's in Front Matter)
 - Use ## or ### for subheadings
 - Use **bold** and `code` for emphasis
 - Use > blockquotes for key insights
+- Include a comprehensive technical analysis or detailed step-by-step conceptual breakdown.
+- Include concrete code blocks, configurations, or mathematical formulas.
+- Include a Markdown table summarizing features or Pros & Cons.
+- Include historical background or industry trade-offs.
 - For technical topics, include at least 1 Mermaid diagram:
   ```mermaid
   graph TD
@@ -380,8 +449,6 @@ Reference facts: {facts}
   Parentheses (), Korean characters, and special chars break the parser.
   Correct: `A["Hot CrossFit (heat stress)"]`
   Wrong:   `A[Hot CrossFit (heat stress)]`
-- Length: 600-1000 words
-- Structure: Introduction, Body (2-3 sections), Conclusion
 
 **SEO Meta (at the end as JSON):**
 ```json_meta
@@ -595,6 +662,11 @@ class FileWriterAgent:
         topic_id = re.sub(r"[\s_]+", "-", topic_id).strip("-")[:40]
         if not topic_id:
             topic_id = f"topic-{date_str}"
+            
+        # Generate cover image for the topic
+        image_filename = f"{date_str}-{topic_id}.png"
+        image_path = Path(f"assets/images/{image_filename}")
+        generate_post_image(topic_en, mode, image_path)
         
         created_files = []
         
@@ -624,6 +696,7 @@ tags:
 {tags_yaml}
 lang: {lang}
 topic_id: "{topic_id}"
+image: "/assets/images/{image_filename}"
 description: "{self._escape_yaml(description)}"
 ---
 

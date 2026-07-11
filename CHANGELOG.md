@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.9.0] — 2026-07-11
+
+### Added
+- **Automated Cover Image Generation**: Implemented a dynamic image generation pipeline inside `FileWriterAgent`.
+  - **Google Imagen 3 API**: Automatically attempts to generate 16:9 featured cover images for every post topic via `Imagen 3`.
+  - **Topic-Aware Style Settings**: Generates photorealistic scenes for `trivia` mode (Style B) and minimalist tech illustrations / 3D renderings for `engineer` mode (Style A).
+  - **Stock Fallback**: Gracefully falls back to Unsplash stock photo redirect search if Imagen 3 quota/billing errors occur, saving local cover files to `assets/images/`.
+  - **UI Template Upgrades**: Refactored `home.html`, `trivia.md`, `engineer.md` post cards, and `post.html` layout templates to display the cover images with smooth hover scale zoom animations.
+- **Deep Content Expansion**: Drastically increased word counts and content depth constraints.
+  - **KOR posts**: Bumped target length to `3000-5000 characters` (previously 700-1200 chars).
+  - **ENG posts**: Bumped target length to `1200-2000 words` (previously 600-1000 words).
+  - **Facts Enrichment**: Injected larger fact pools (`1500-3000 characters`) into ScholarlySearchAgent summaries.
+  - **Mandatory Sections**: Directs the WriterAgent to compile step-by-step logic/architecture explanations, code/config snippets, feature comparison tables, and historical context.
+
+---
+
 ## [1.8.1] — 2026-07-11
 
 ### Fixed
