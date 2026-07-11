@@ -46,6 +46,7 @@ jobs:
           QUERY_INPUT: ${{ github.event.inputs.query_input }}
           CHAT_ID: ${{ github.event.inputs.chat_id }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || secrets.GEMINI_MODEL }}
         run: |
           python scripts/multi_agent.py
 

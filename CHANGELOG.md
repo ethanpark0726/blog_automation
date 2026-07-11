@@ -6,6 +6,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.7.0] — 2026-07-11
+
+### Added
+- **Dynamic Model Selection**: Enabled model customization to support upgrading or switching Gemini models dynamically as new models are released or billing tiers change.
+  - Implemented the `GEMINI_MODEL` environment variable in `scripts/multi_agent.py` to override the default model, falling back to stable `gemini-2.5-flash` if unconfigured.
+  - Printed active model name at script startup to improve pipeline transparency in GitHub Actions logs.
+  - Configured `.github/workflows/telegram_trigger.yml` to inject `GEMINI_MODEL` from GitHub Action variables or secrets.
+
+---
+
 ## [1.6.3] — 2026-07-11
 
 ### Fixed

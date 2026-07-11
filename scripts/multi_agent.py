@@ -29,6 +29,7 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 QUERY_INPUT = os.environ.get("QUERY_INPUT", "")
 CHAT_ID = os.environ.get("CHAT_ID", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "").strip() or "gemini-2.5-flash"
 
 if not GEMINI_API_KEY:
     print("❌ ERROR: GEMINI_API_KEY environment variable is not set.")
@@ -41,7 +42,7 @@ if not QUERY_INPUT:
 # ── Initialize Gemini ───────────────────────────────────────────────────────
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
+    model_name=GEMINI_MODEL,
     generation_config=genai.types.GenerationConfig(
         temperature=0.7,
         max_output_tokens=65536,
@@ -454,6 +455,7 @@ def main():
     print("=" * 60)
     print(f"🤖 Multi-Agent Blog Generator started")
     print(f"📝 Input: {QUERY_INPUT}")
+    print(f"🧠 Model: {GEMINI_MODEL}")
     print("=" * 60)
     
     send_telegram(CHAT_ID, f"🤖 *Agent pipeline started*\n\n📝 Topic: `{QUERY_INPUT}`\n\n`[1/5]` Classifying topic...")

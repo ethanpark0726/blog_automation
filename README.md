@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.6.3-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.7.0-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -169,14 +169,15 @@ Auto-generates Jekyll Front Matter and saves to `_posts/ko/` and `_posts/en/`.
 
 ## 🔧 Environment Variables Reference
 
-### GitHub Actions Secrets
+### GitHub Actions Secrets & Variables
 
-| Name | Description |
-|---|---|
-| `GEMINI_API_KEY` | Google Gemini API key |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot token |
-| `TELEGRAM_CHAT_ID` | Chat ID for completion notifications |
-| `GH_PAT` | Personal Access Token for Git push |
+| Name | Type | Description | Default / Requirement |
+|---|---|---|---|
+| `GEMINI_API_KEY` | Secret | Google Gemini API key | (Required) |
+| `TELEGRAM_BOT_TOKEN` | Secret | Telegram bot token | (Required) |
+| `TELEGRAM_CHAT_ID` | Secret/Var | Chat ID for completion notifications | (Optional) |
+| `GH_PAT` | Secret | Personal Access Token for Git push | (Required) |
+| `GEMINI_MODEL` | Secret/Var | Gemini model to run the pipeline (e.g. `gemini-2.5-pro`) | `gemini-2.5-flash` |
 
 ### Cloudflare Worker Variables
 
@@ -191,7 +192,7 @@ Auto-generates Jekyll Front Matter and saves to `_posts/ko/` and `_posts/en/`.
 
 ## 📊 Current Version
 
-**v1.6.3** — Security hardening: Enforced strict verification of ALLOWED_CHAT_ID in Cloudflare Worker.
+**v1.7.0** — Configurable Gemini API models with custom environment variable overrides.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -199,7 +200,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 
 ## 🗺️ Roadmap
 
-- **`[ ]` v1.7.0**: Enable Gemini API billing → upgrade to `gemini-3.1-pro` / `gemini-2.5-pro`
+- **`[x]` v1.7.0**: Configure dynamic Gemini API models (enables switching to `gemini-2.5-pro` with billing)
 - **v2.0.0**: Voice input (Telegram voice messages), auto post images (Imagen API), social media sharing (Twitter/X, LinkedIn)
 
 ---
