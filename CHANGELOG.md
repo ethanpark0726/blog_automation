@@ -6,6 +6,21 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.13.0] — 2026-07-14
+
+### Added
+- **English Research Planner**: A compact first call resolves multilingual input into an English canonical topic and 2-4 English source queries.
+- **English Source Coverage Gate**: Long-form calls start only after local checks find at least 500 fact characters and two verified references.
+- **Korean Localizer Agent**: The validated English canonical article is localized into Korean without adding claims, statistics, citations, or URLs.
+- **Phase 3 Pipeline Tests**: Offline integration coverage verifies the exact four-call order and confirms that sparse sources stop before long-form generation.
+
+### Changed
+- **Canonical Content Flow**: Replaced independent KO/EN writing and editing with `research_planner → writer_en → editor_en → localizer_ko`.
+- **English-First Research**: Wikipedia and other research APIs now receive only planner-approved English queries.
+- **Quality-Preserving Localization**: English validation completes before Korean localization begins, keeping both language versions factually aligned.
+
+---
+
 ## [1.12.1] — 2026-07-14
 
 ### Fixed

@@ -2,14 +2,15 @@
 """
 Multi-Agent Blog Generation System
 ====================================
-Telegram input → [Classifier] → [Search] → [Writer KO/EN] → [Editor] → Jekyll Markdown file generation
+Telegram input → [Planner] → [English Research] → [English Writer/Editor] → [KO Localizer] → Jekyll Markdown
 
 Agent configuration:
-  1. ClassifierAgent  : Topic classification (Dad Mode / Engineer Mode) and keyword extraction
-  2. SearchAgent      : Fact collection via DuckDuckGo/Wikipedia API (hallucination prevention)
-  3. WriterAgent      : KO + EN draft generation via Gemini API
-  4. EditorAgent      : Fact-checking, tone-and-manner validation, markdown format correction
-  5. FileWriterAgent  : Merge Jekyll Front Matter and save to _posts/ko/, _posts/en/
+  1. ResearchPlannerAgent : Resolve multilingual input into English research queries
+  2. ScholarlySearchAgent : Collect English-language source facts without Gemini
+  3. EnglishWriterAgent   : Generate the canonical English draft
+  4. EnglishEditorAgent   : Fact-check and validate the canonical English article
+  5. KoreanLocalizerAgent : Localize the validated article without adding claims
+  6. FileWriterAgent      : Save paired Jekyll posts
 """
 
 import os
@@ -61,10 +62,10 @@ model = genai.GenerativeModel(model_name=GEMINI_MODEL)
 usage_tracker = UsageTracker()
 
 STAGE_GENERATION_CONFIGS = {
-    "writer_ko": {"temperature": 0.7, "max_output_tokens": 8192},
+    "research_planner": {"temperature": 0.1, "max_output_tokens": 1024},
     "writer_en": {"temperature": 0.7, "max_output_tokens": 12288},
-    "editor_ko": {"temperature": 0.2, "max_output_tokens": 8192},
     "editor_en": {"temperature": 0.2, "max_output_tokens": 12288},
+    "localizer_ko": {"temperature": 0.2, "max_output_tokens": 8192},
 }
 
 KST = timezone(timedelta(hours=9))
@@ -238,16 +239,108 @@ class ClassifierAgent:
         return result
 
 
+class ResearchPlanError(ValueError):
+    """Raised when the English research plan cannot be used safely."""
+
+    category = "research_plan_error"
+    stage = "research_planner"
+
+
+class SourceCoverageError(ValueError):
+    """Raised before long-form calls when English evidence is insufficient."""
+
+    category = "source_coverage_error"
+    stage = "english_source_coverage"
+
+
+class ResearchPlannerAgent:
+    def run(self, query: str, classification: dict) -> dict:
+        print("\n[ResearchPlannerAgent] Resolving input into English research queries...")
+        prompt = f"""
+You are a multilingual research planner. Resolve the user's intent and return a compact English research plan.
+
+User input: {query}
+Local topic mode: {classification.get('mode', 'trivia')}
+
+Return JSON only, with this exact schema:
+{{
+  "canonical_topic_en": "clear natural-English topic",
+  "search_queries_en": ["specific English query 1", "specific English query 2"],
+  "intent_summary_en": "one-sentence interpretation of the question"
+}}
+
+Rules:
+- Disambiguate misspellings and place/person/product names from context.
+- All values must be in English.
+- Provide 2-4 source-search queries, ordered from most specific to broadest.
+- Do not answer the question and do not include Markdown fences.
+"""
+        raw = call_gemini(prompt, stage="research_planner")
+        plan = self._parse_plan(raw)
+        classification["topic_en"] = plan["canonical_topic_en"][:60]
+        print(f"[ResearchPlannerAgent] Research plan complete: {plan}")
+        return plan
+
+    @staticmethod
+    def _parse_plan(raw: str) -> dict:
+        cleaned = raw.strip()
+        fenced = re.search(r"```(?:json)?\s*(\{.*\})\s*```", cleaned, re.DOTALL)
+        if fenced:
+            cleaned = fenced.group(1)
+        try:
+            payload = json.loads(cleaned)
+        except json.JSONDecodeError as exc:
+            raise ResearchPlanError("Research planner returned invalid JSON") from exc
+
+        topic = str(payload.get("canonical_topic_en") or "").strip()
+        raw_queries = payload.get("search_queries_en")
+        queries = []
+        if isinstance(raw_queries, list):
+            for item in raw_queries:
+                normalized = re.sub(r"\s+", " ", str(item)).strip()
+                if normalized and normalized.casefold() not in {
+                    query.casefold() for query in queries
+                }:
+                    queries.append(normalized[:160])
+
+        if not topic or not re.search(r"[A-Za-z]", topic):
+            raise ResearchPlanError("Research planner did not return an English canonical topic")
+        if not queries or not all(re.search(r"[A-Za-z]", query) for query in queries):
+            raise ResearchPlanError("Research planner did not return usable English search queries")
+
+        return {
+            "canonical_topic_en": topic[:160],
+            "search_queries_en": queries[:4],
+            "intent_summary_en": str(payload.get("intent_summary_en") or "").strip()[:300],
+        }
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Agent 2: ScholarlySearchAgent
 # ═══════════════════════════════════════════════════════════════════════════
 class ScholarlySearchAgent:
-    def run(self, classification: dict) -> str:
+    def run(self, classification: dict, plan: dict) -> str:
         mode = classification.get("mode", "engineer")
-        query = classification.get("search_query", classification.get("topic_en", ""))
-        print(f"\n[ScholarlySearchAgent] Collecting information for '{query}' (mode: {mode})...")
-        
-        queries = build_search_queries(query)
+        seeds = [plan.get("canonical_topic_en", ""), *plan.get("search_queries_en", [])]
+        queries = []
+        for seed in seeds:
+            if not seed or re.search(r"[가-힣]", seed):
+                continue
+            for variant in build_search_queries(seed, limit=4):
+                if variant.casefold() not in {item.casefold() for item in queries}:
+                    queries.append(variant)
+                if len(queries) >= 8:
+                    break
+            if len(queries) >= 8:
+                break
+
+        if not queries:
+            raise ResearchPlanError("No English search query was available")
+
+        print(
+            f"\n[ScholarlySearchAgent] Collecting English information for "
+            f"'{plan.get('canonical_topic_en', queries[0])}' (mode: {mode})..."
+        )
         print(f"[ScholarlySearchAgent] Search variants: {queries}")
 
         facts = []
@@ -270,7 +363,7 @@ class ScholarlySearchAgent:
         for search_query in queries:
             add_result("Authoritative Reference (Wikipedia)", search_wikipedia(search_query))
 
-        primary_query = queries[-1] if queries else query
+        primary_query = plan.get("search_queries_en", [queries[0]])[0]
         if mode == "trivia":
             add_result("Book References (Google Books)", search_google_books(primary_query))
         else:
@@ -289,82 +382,39 @@ class ScholarlySearchAgent:
         
         combined_facts = "\n\n".join(facts)
         print(f"[ScholarlySearchAgent] Collection complete (length: {len(combined_facts)} chars)")
-        if len(combined_facts) < 300:
-            print(
-                "[ScholarlySearchAgent] Warning: source coverage is sparse; "
-                "writer/editor prompts must avoid unsupported specifics."
+        references = extract_references(combined_facts)
+        domains = {
+            urllib.parse.urlparse(reference["url"]).netloc.lower()
+            for reference in references
+            if reference.get("url")
+        }
+        print(
+            f"[ScholarlySearchAgent] Source coverage: {len(references)} references, "
+            f"{len(domains)} domains"
+        )
+        if len(combined_facts) < 500 or len(references) < 2:
+            raise SourceCoverageError(
+                "English source coverage is below the publication floor: "
+                f"{len(combined_facts)} fact characters, {len(references)} references, "
+                f"{len(domains)} domains"
             )
-        return combined_facts or "No external reference facts were available. Avoid unsupported specifics."
+        if len(domains) < 2:
+            print(
+                "[ScholarlySearchAgent] Warning: references come from a single domain; "
+                "the editor must qualify unsupported claims."
+            )
+        return combined_facts
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Agent 3: WriterAgent
 # ═══════════════════════════════════════════════════════════════════════════
 class WriterAgent:
-    def run(self, query: str, classification: dict, facts: str) -> dict:
+    def run(self, classification: dict, plan: dict, facts: str) -> str:
         mode = classification.get("mode", "engineer")
-        print(f"\n[WriterAgent] Drafting post (mode: {mode})...")
-        
-        # ─── Korean draft ─────────────────────────────────────────────
-        ko_style = self._get_ko_style(mode)
-        ko_prompt = f"""
-You are a professional tech blogger. Write a blog post in Korean on the following topic.
-The post must be highly detailed, comprehensive, and structured as an in-depth article.
+        english_topic = plan["canonical_topic_en"]
+        print(f"\n[WriterAgent] Drafting canonical English post (mode: {mode})...")
 
-Topic: {query}
-Reference facts: {facts}
-{ko_style}
-
-**Required Format & Content Rules (KOR):**
-- Length: 3000-5000 characters (including markdown) for deep, comprehensive coverage. Do NOT summarize or write briefly.
-- No H1 title (it goes into Front Matter separately)
-- Use ## or ### for subheadings
-- Use **bold** or `code` for emphasis
-- Use > blockquotes for key insights
-- Include a detailed step-by-step technical mechanism or conceptual process breakdown.
-- Include concrete code examples (with syntax highlighting), config snippets, or mathematical formulas.
-- Include a comparison/evaluation markdown table (e.g. Pros & Cons, or feature comparison).
-- Include historical context, origins, or real-world background.
-- For technical topics, include at least 1 Mermaid diagram:
-  ```mermaid
-  graph TD
-      A["Start"] --> B["Process"]
-  ```
-- ⚠️ **Mermaid CRITICAL Rule**: Always wrap ALL node labels in double quotes.
-  Parentheses (), Korean characters, and special chars cause parse errors — always write like this:
-  Correct: `A["Sun-dried (adobe brick)"]`
-  Wrong:   `A[Sun-dried (adobe brick)]`
-
-**SEO Meta (at the end as JSON):**
-```json_meta
-{{"title": "Compelling Korean title", "description": "Meta description within 150 characters", "tags": ["tag1", "tag2", "tag3"], "search_query_en": "concise English source-search query"}}
-```
-- `search_query_en` must identify the intended place, person, object, or concept in natural English so the pipeline can collect English references without another Gemini call.
-"""
-        ko_draft = call_gemini(ko_prompt, stage="writer_ko")
-
-        supplemental_query = self._extract_english_search_query(ko_draft)
-        english_topic = supplemental_query or query
-        if supplemental_query and supplemental_query.casefold() != query.casefold():
-            print(
-                "[WriterAgent] Expanding references with writer-provided English query: "
-                f"'{supplemental_query}'"
-            )
-            supplemental_facts = ScholarlySearchAgent().run(
-                {
-                    "mode": mode,
-                    "search_query": supplemental_query,
-                    "topic_en": supplemental_query,
-                }
-            )
-            if (
-                not supplemental_facts.startswith("No external reference facts were available")
-                and supplemental_facts not in facts
-            ):
-                facts = f"{facts}\n\n{supplemental_facts}".strip()
-            classification["topic_en"] = supplemental_query[:60]
-        
-        # ─── English draft ────────────────────────────────────────────
         en_style = self._get_en_style(mode)
         en_prompt = f"""
 You are a professional tech blogger. Write a blog post in natural, fluent English on the following topic.
@@ -400,42 +450,8 @@ Reference facts: {facts}
 ```
 """
         en_draft = call_gemini(en_prompt, stage="writer_en")
-        
-        print("[WriterAgent] Draft writing complete (KO + EN)")
-        return {"ko": ko_draft, "en": en_draft}, facts
-
-    @staticmethod
-    def _extract_english_search_query(draft: str) -> str:
-        match = re.search(r"```json_meta\s*(\{.*?\})\s*```", draft, re.DOTALL)
-        if not match:
-            return ""
-        try:
-            metadata = json.loads(match.group(1))
-        except json.JSONDecodeError:
-            return ""
-        query = str(metadata.get("search_query_en") or "").strip()
-        return re.sub(r"\s+", " ", query)[:160]
-    
-    def _get_ko_style(self, mode: str) -> str:
-        if mode == "trivia":
-            return """
-**Writing Style: Trivia Vault**
-- Audience: General public interested in trivia and science
-- Tone: Friendly and warm explanatory style ("~해요", "~랍니다")
-- Explain complex concepts using everyday analogies (e.g., "A computer's CPU is like the human brain")
-- Minimize jargon; when used, explain in parentheses
-- Use emojis appropriately (🎯, 💡, 🔧, etc.)
-"""
-        else:
-            return """
-**Writing Style: Engineer Mode**
-- Audience: Developers, IT professionals
-- Tone: Clear, logical technical documentation style
-- Use technical terminology freely
-- Include concrete code examples, figures, and benchmarks
-- Mention trade-offs and real-world application perspectives
-- Actively use Mermaid diagrams and code blocks
-"""
+        print("[WriterAgent] Canonical English draft complete")
+        return en_draft
     
     def _get_en_style(self, mode: str) -> str:
         if mode == "trivia":
@@ -460,37 +476,30 @@ Reference facts: {facts}
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Agent 4: EditorAgent (combined fact verification + copyediting)
+# Agent 4: EnglishEditorAgent (canonical fact verification + copyediting)
 # ═══════════════════════════════════════════════════════════════════════════
 class EditorAgent:
-    def run(self, drafts: dict, classification: dict, facts: str) -> dict:
-        print("\n[EditorAgent] Fact-checking and copyediting drafts in one pass...")
+    def run(self, draft: str, classification: dict, facts: str) -> tuple[str, str]:
+        print("\n[EditorAgent] Fact-checking the canonical English draft...")
         references = extract_references(facts)
-        result = {}
-        for lang, draft in drafts.items():
-            print(f"[EditorAgent] Reviewing {lang.upper()} against collected sources...")
-            reviewed = self._review_and_fix(draft, lang, classification, facts)
-            final = append_references(reviewed, lang, references)
-            validation = validate_post(
-                final,
-                lang,
-                source_urls=[reference["url"] for reference in references],
-            )
-            for warning in validation.warnings:
-                print(f"[ContentValidator:{lang}] Warning: {warning}")
-            if not validation.valid:
-                raise ContentValidationError(lang, validation.errors)
-            result[lang] = final
+        reviewed = self._review_and_fix(draft, classification, facts)
+        final = append_references(reviewed, "en", references)
+        validation = validate_post(
+            final,
+            "en",
+            source_urls=[reference["url"] for reference in references],
+        )
+        for warning in validation.warnings:
+            print(f"[ContentValidator:en] Warning: {warning}")
+        if not validation.valid:
+            raise ContentValidationError("en", validation.errors)
 
-        print("[EditorAgent] Combined verification and copyediting complete (KO + EN)")
-        return result
+        print("[EditorAgent] Canonical English review and validation complete")
+        return reviewed, final
 
-    def _review_and_fix(self, draft: str, lang: str, classification: dict, facts: str) -> str:
-        lang_name = "Korean" if lang == "ko" else "English"
-        lang_instruction = "in Korean" if lang == "ko" else "in English"
-
+    def _review_and_fix(self, draft: str, classification: dict, facts: str) -> str:
         prompt = f"""
-You are both a strict scientific fact-checker and a professional {lang_name} blog editor.
+You are both a strict scientific fact-checker and a professional English blog editor.
 Review the draft directly against the collected reference facts, correct it, and return the complete final article in one pass.
 
 **Topic mode:** {classification.get('mode', 'trivia')}
@@ -504,10 +513,9 @@ Review the draft directly against the collected reference facts, correct it, and
 1. Fact-check every statistic, definition, causal claim, and technical assertion against the collected facts.
 2. Remove, qualify, or correct claims that the references do not support. Never invent a correction.
 3. Preserve the requested depth, examples, tables, code/configuration, and overall article length.
-   - Korean output must remain at least 1200 characters.
    - English output must remain at least 450 words.
    - Keep at least two level-2 (`##`) section headings.
-4. Make tone and phrasing natural for {lang_name} readers.
+4. Make tone and phrasing natural for English readers.
 5. Repair Markdown syntax and keep at least two `##` sections.
 6. Preserve a valid `json_meta` block containing title, description, and a tags array.
 7. Ensure all Mermaid node labels are wrapped in double quotes.
@@ -521,16 +529,68 @@ Review the draft directly against the collected reference facts, correct it, and
 ---
 
 **Output rules:**
-- Output only the corrected final article {lang_instruction}.
+- Output only the corrected final article in English.
 - Ensure the `json_meta` block is included at the very end of your response.
 - Do NOT output any editor comments, explanations, or notes outside the draft body.
 """
-        final = call_gemini(prompt, stage=f"editor_{lang}")
+        final = call_gemini(prompt, stage="editor_en")
         return final.strip()
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Agent 5: FileWriterAgent
+# Agent 5: KoreanLocalizerAgent
+# ═══════════════════════════════════════════════════════════════════════════
+class KoreanLocalizerAgent:
+    def run(
+        self,
+        reviewed_english: str,
+        original_query: str,
+        classification: dict,
+        facts: str,
+    ) -> str:
+        print("\n[KoreanLocalizerAgent] Localizing the validated English article...")
+        prompt = f"""
+You are a professional Korean localization editor. Translate and culturally localize the validated English article into natural Korean.
+
+Original user question: {original_query}
+Topic mode: {classification.get('mode', 'trivia')}
+
+**Validated canonical English article:**
+---
+{reviewed_english}
+---
+
+Rules:
+1. Preserve every factual claim, qualification, section, table, code block, formula, and Mermaid diagram from the English canonical article.
+2. Do not add new claims, examples, statistics, citations, or URLs.
+3. Produce 3000-5000 Korean characters and keep at least two level-2 (`##`) headings.
+4. Use natural Korean rather than literal machine-translation phrasing.
+5. Keep code/configuration identifiers unchanged and translate explanatory comments only when safe.
+6. Keep all Mermaid node labels wrapped in double quotes.
+7. Do not add a 참고자료 section. The pipeline appends verified references locally.
+8. End with a valid `json_meta` block containing a Korean title, Korean description, and Korean tags array.
+
+Output only the complete Korean article and its final `json_meta` block.
+"""
+        localized = call_gemini(prompt, stage="localizer_ko")
+        references = extract_references(facts)
+        final = append_references(localized, "ko", references)
+        validation = validate_post(
+            final,
+            "ko",
+            source_urls=[reference["url"] for reference in references],
+        )
+        for warning in validation.warnings:
+            print(f"[ContentValidator:ko] Warning: {warning}")
+        if not validation.valid:
+            raise ContentValidationError("ko", validation.errors)
+
+        print("[KoreanLocalizerAgent] Korean localization and validation complete")
+        return final
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Agent 6: FileWriterAgent
 # ═══════════════════════════════════════════════════════════════════════════
 class FileWriterAgent:
     def run(self, posts: dict, classification: dict) -> list:
@@ -642,40 +702,54 @@ def main():
     send_telegram(
         CHAT_ID,
         f"🤖 *Agent pipeline started*\n\n📝 Topic: `{QUERY_INPUT}`\n\n"
-        f"Gemini budget: `4` successful calls\n`[1/5]` Classifying topic locally...",
+        f"Gemini budget: `4` successful calls\n`[1/5]` Planning English research...",
     )
     
     try:
         # ─── Step 1: Classify ─────────────────────────────────────────
         classifier = ClassifierAgent()
         classification = classifier.run(QUERY_INPUT)
+        planner = ResearchPlannerAgent()
+        research_plan = planner.run(QUERY_INPUT, classification)
         
         send_telegram(CHAT_ID, 
-            f"✅ `[1/5]` Local classification complete: *{'Trivia Vault' if classification['mode'] == 'trivia' else 'Engineer Mode'}*\n"
-            f"🔍 `[2/5]` Collecting scholarly facts (arXiv/Crossref/Books)..."
+            f"✅ `[1/5]` English research plan complete: `{research_plan['canonical_topic_en']}`\n"
+            f"🔍 `[2/5]` Collecting English scholarly facts..."
         )
         
         # ─── Step 2: Search ───────────────────────────────────────────
         search = ScholarlySearchAgent()
-        facts = search.run(classification)
+        facts = search.run(classification, research_plan)
         
         send_telegram(CHAT_ID, 
-            f"✅ `[2/5]` Fact collection complete without Gemini summarization\n"
-            f"✍️ `[3/5]` Writer agent drafting KO + EN posts..."
+            f"✅ `[2/5]` English source coverage gate passed\n"
+            f"✍️ `[3/5]` Drafting the canonical English article..."
         )
         
         # ─── Step 3: Write ────────────────────────────────────────────
         writer = WriterAgent()
-        drafts, facts = writer.run(QUERY_INPUT, classification, facts)
+        english_draft = writer.run(classification, research_plan, facts)
         
         send_telegram(CHAT_ID, 
-            f"✅ `[3/5]` Drafts complete (KO + EN)\n"
-            f"🛡️ `[4/5]` Combined fact-check and copyedit in progress..."
+            f"✅ `[3/5]` Canonical English draft complete\n"
+            f"🛡️ `[4/5]` Fact-checking English and localizing Korean..."
         )
 
-        # ─── Step 4: Combined fact verification, editing, and local validation
+        # ─── Step 4: English fact verification and Korean localization
         editor = EditorAgent()
-        final_posts = editor.run(drafts, classification, facts)
+        reviewed_english, final_english = editor.run(
+            english_draft,
+            classification,
+            facts,
+        )
+        localizer = KoreanLocalizerAgent()
+        final_korean = localizer.run(
+            reviewed_english,
+            QUERY_INPUT,
+            classification,
+            facts,
+        )
+        final_posts = {"ko": final_korean, "en": final_english}
 
         expected_successful_calls = 4
         if usage_tracker.successful_calls != expected_successful_calls:
@@ -690,7 +764,7 @@ def main():
         )
 
         send_telegram(CHAT_ID, 
-            f"✅ `[4/5]` Fact-check, copyedit, and local validation complete\n"
+            f"✅ `[4/5]` English validation and Korean localization complete\n"
             f"💾 `[5/5]` Saving files and pushing to Git..."
         )
         

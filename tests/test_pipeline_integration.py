@@ -69,6 +69,26 @@ class PipelineIntegrationTests(unittest.TestCase):
         def fake_call(_prompt, stage, retry=3):
             del retry
             stages.append(stage)
+            if stage == "research_planner":
+                response = SimpleNamespace(
+                    usage_metadata=SimpleNamespace(
+                        prompt_token_count=50,
+                        candidates_token_count=25,
+                        total_token_count=75,
+                    )
+                )
+                pipeline.usage_tracker.record_attempt(stage)
+                pipeline.usage_tracker.record_success(stage, response)
+                return json.dumps(
+                    {
+                        "canonical_topic_en": "Formation of the Solar System",
+                        "search_queries_en": [
+                            "formation of the Solar System",
+                            "solar nebula theory",
+                        ],
+                        "intent_summary_en": "Explain how the Solar System formed.",
+                    }
+                )
             lang = "ko" if stage.endswith("_ko") else "en"
             response = SimpleNamespace(
                 usage_metadata=SimpleNamespace(
@@ -90,12 +110,16 @@ class PipelineIntegrationTests(unittest.TestCase):
             search_queries.append(query)
             return (
                 "[Wikipedia] Title: Formation and evolution of the Solar System\n"
-                "Snippet: Source summary.\n"
+                "Snippet: " + ("Source-grounded formation summary. " * 25) + "\n"
                 "Link: https://en.wikipedia.org/wiki/Formation_and_evolution_of_the_Solar_System"
             )
 
         pipeline.search_wikipedia = fake_wikipedia
-        pipeline.search_google_books = lambda _query: "No books found."
+        pipeline.search_google_books = lambda _query: (
+            "[Book] Title: The Origin of the Solar System\n"
+            "Author(s): Example Author\n"
+            "Link: https://books.google.com/books?id=solar-system"
+        )
 
         original_cwd = Path.cwd()
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -118,14 +142,32 @@ class PipelineIntegrationTests(unittest.TestCase):
 
         self.assertEqual(
             stages,
-            ["writer_ko", "writer_en", "editor_ko", "editor_en"],
+            ["research_planner", "writer_en", "editor_en", "localizer_ko"],
         )
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["usage"]["successful_calls"], 4)
         self.assertEqual(result["usage"]["api_attempts"], 4)
         self.assertEqual(len(ko_files), 1)
         self.assertEqual(len(en_files), 1)
-        self.assertIn("formation of the Solar System", search_queries)
+        self.assertIn(
+            "formation of the solar system",
+            [query.casefold() for query in search_queries],
+        )
+
+    def test_source_gate_blocks_long_form_calls_when_references_are_missing(self):
+        pipeline = load_pipeline_module()
+        pipeline.search_duckduckgo = lambda _query: "No search results"
+        pipeline.search_wikipedia = lambda _query: "No Wikipedia pages found."
+        pipeline.search_google_books = lambda _query: "No books found."
+
+        with self.assertRaises(pipeline.SourceCoverageError):
+            pipeline.ScholarlySearchAgent().run(
+                {"mode": "trivia"},
+                {
+                    "canonical_topic_en": "Unknown niche topic",
+                    "search_queries_en": ["unknown niche topic"],
+                },
+            )
 
 
 if __name__ == "__main__":

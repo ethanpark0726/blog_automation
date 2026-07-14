@@ -30,7 +30,7 @@ class PipelineBudgetTests(unittest.TestCase):
         self.assertEqual(len(assignments), 1)
         self.assertEqual(ast.literal_eval(assignments[0].value), 4)
 
-    def test_only_writer_and_editor_call_sites_remain(self):
+    def test_only_phase_three_call_sites_remain(self):
         stages = []
         for node in ast.walk(self.tree):
             if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
@@ -46,7 +46,14 @@ class PipelineBudgetTests(unittest.TestCase):
 
         self.assertEqual(
             sorted(stages),
-            sorted(["'writer_ko'", "'writer_en'", "f'editor_{lang}'"]),
+            sorted(
+                [
+                    "'research_planner'",
+                    "'writer_en'",
+                    "'editor_en'",
+                    "'localizer_ko'",
+                ]
+            ),
         )
 
 
