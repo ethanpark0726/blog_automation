@@ -16,7 +16,6 @@ import os
 import sys
 import json
 import re
-import time
 import urllib.request
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -24,6 +23,20 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 import google.generativeai as genai
+
+from content_quality import (
+    ContentValidationError,
+    append_references,
+    classify_query,
+    extract_references,
+    validate_post,
+)
+from gemini_runtime import (
+    UsageTracker,
+    call_gemini as call_gemini_with_tracking,
+    reset_pipeline_result,
+    write_pipeline_result,
+)
 
 # ── Load environment variables ──────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -42,13 +55,15 @@ if not QUERY_INPUT:
 
 # ── Initialize Gemini ───────────────────────────────────────────────────────
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel(
-    model_name=GEMINI_MODEL,
-    generation_config=genai.types.GenerationConfig(
-        temperature=0.7,
-        max_output_tokens=65536,
-    )
-)
+model = genai.GenerativeModel(model_name=GEMINI_MODEL)
+usage_tracker = UsageTracker()
+
+STAGE_GENERATION_CONFIGS = {
+    "writer_ko": {"temperature": 0.7, "max_output_tokens": 8192},
+    "writer_en": {"temperature": 0.7, "max_output_tokens": 12288},
+    "editor_ko": {"temperature": 0.2, "max_output_tokens": 8192},
+    "editor_en": {"temperature": 0.2, "max_output_tokens": 12288},
+}
 
 KST = timezone(timedelta(hours=9))
 
@@ -71,19 +86,16 @@ def send_telegram(chat_id: str, text: str) -> None:
         print(f"[Telegram] Failed to send notification: {e}")
 
 
-def call_gemini(prompt: str, retry: int = 3) -> str:
-    """Call the Gemini API (with retry logic)"""
-    # Safe delay of 5 seconds to avoid exceeding the 15 RPM rate limit of the free tier
-    time.sleep(5)
-    for attempt in range(retry):
-        try:
-            response = model.generate_content(prompt)
-            return response.text.strip()
-        except Exception as e:
-            print(f"[Gemini] Attempt {attempt+1}/{retry} failed: {e}")
-            if attempt < retry - 1:
-                time.sleep(5 * (attempt + 1))
-    raise RuntimeError("Gemini API call failed repeatedly.")
+def call_gemini(prompt: str, stage: str, retry: int = 3) -> str:
+    """Call Gemini through the shared quota-aware runtime."""
+    return call_gemini_with_tracking(
+        model=model,
+        prompt=prompt,
+        stage=stage,
+        tracker=usage_tracker,
+        retry=retry,
+        generation_config=STAGE_GENERATION_CONFIGS.get(stage),
+    )
 
 
 def search_duckduckgo(query: str) -> str:
@@ -193,7 +205,8 @@ def search_wikipedia(query: str) -> str:
     """Search Wikipedia API for clean factual references"""
     try:
         encoded = urllib.parse.quote(query)
-        url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={encoded}&format=json&origin=*"
+        wiki_lang = "ko" if re.search(r"[가-힣]", query) else "en"
+        url = f"https://{wiki_lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch={encoded}&format=json&origin=*"
         req = urllib.request.Request(url, headers={"User-Agent": "BlogBot/1.0"})
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode("utf-8"))
@@ -205,7 +218,7 @@ def search_wikipedia(query: str) -> str:
             snippet = item.get("snippet", "")
             snippet = re.sub(r'<[^>]*>', '', snippet)
             snippet = re.sub(r'\s+', ' ', snippet)
-            page_url = f"https://en.wikipedia.org/wiki/{urllib.parse.quote(title)}"
+            page_url = f"https://{wiki_lang}.wikipedia.org/wiki/{urllib.parse.quote(title)}"
             results.append(f"[Wikipedia] Title: {title}\nSnippet: {snippet}\nLink: {page_url}")
         return "\n\n".join(results) if results else "No Wikipedia pages found."
     except Exception as e:
@@ -217,40 +230,8 @@ def search_wikipedia(query: str) -> str:
 # ═══════════════════════════════════════════════════════════════════════════
 class ClassifierAgent:
     def run(self, query: str) -> dict:
-        print(f"\n[ClassifierAgent] Classifying input: '{query}'")
-        prompt = f"""
-Analyze the following input text and respond with JSON only. (Pure JSON, no code blocks)
-
-Input: "{query}"
-
-Analysis criteria:
-- mode: Determine whether the input is a general knowledge/trivia topic ("trivia") or a specialized technical topic ("engineer")
-  - trivia: Everyday science, history, common sense, "explain simply", light topics suitable for analogies
-  - engineer: Technical terminology, development, systems, algorithms, specific tech stacks
-- topic_ko: Core topic in Korean (within 10 characters)
-- topic_en: Core topic in English (within 5 words)
-- keywords: Array of core keywords (up to 5)
-- search_query: English search query suitable for fact retrieval
-
-Response format:
-{{"mode": "trivia|engineer", "topic_ko": "...", "topic_en": "...", "keywords": ["kw1", "kw2"], "search_query": "..."}}
-"""
-        result_str = call_gemini(prompt)
-        # Parse JSON
-        try:
-            # Strip markdown code blocks if present
-            result_str = re.sub(r"```json?\s*", "", result_str)
-            result_str = re.sub(r"```", "", result_str).strip()
-            result = json.loads(result_str)
-        except json.JSONDecodeError:
-            print(f"[ClassifierAgent] JSON parse failed, using defaults. Raw:\n{result_str}")
-            result = {
-                "mode": "engineer",
-                "topic_ko": query[:20],
-                "topic_en": query[:30],
-                "keywords": [query.split()[0]] if query.split() else ["tech"],
-                "search_query": query
-            }
+        print(f"\n[ClassifierAgent] Classifying input locally: '{query}'")
+        result = classify_query(query)
         print(f"[ClassifierAgent] Classification complete: {result}")
         return result
 
@@ -298,24 +279,7 @@ class ScholarlySearchAgent:
         
         combined_facts = "\n\n".join(facts)
         print(f"[ScholarlySearchAgent] Collection complete (length: {len(combined_facts)} chars)")
-        
-        # Enrich collected facts with Gemini
-        enrich_prompt = f"""
-Summarize fact-based information about the following topic based on the provided reference sources.
-
-Topic: {classification.get('topic_ko', '')} ({classification.get('topic_en', '')})
-Collected reference facts:
-{combined_facts}
-
-Write accurate background information (no fabrication) covering the following, in 1500-3000 characters:
-1. Core concept definition & scientific/technical background
-2. Key characteristics, principles, or architectures (3-4 items)
-3. Real-world use cases, vendor implementations, or current status
-4. Explicitly list the Titles and URLs/Links of the sources found in the reference facts above so we can cite them.
-"""
-        enriched = call_gemini(enrich_prompt)
-        print(f"[ScholarlySearchAgent] Information enrichment complete")
-        return combined_facts + "\n\n=== Enriched Summary ===\n" + enriched
+        return combined_facts or "No external reference facts were available. Avoid unsupported specifics."
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -361,7 +325,7 @@ Reference facts: {facts}
 {{"title": "Compelling Korean title", "description": "Meta description within 150 characters", "tags": ["tag1", "tag2", "tag3"]}}
 ```
 """
-        ko_draft = call_gemini(ko_prompt)
+        ko_draft = call_gemini(ko_prompt, stage="writer_ko")
         
         # ─── English draft ────────────────────────────────────────────
         en_style = self._get_en_style(mode)
@@ -398,7 +362,7 @@ Reference facts: {facts}
 {{"title": "Compelling English Title", "description": "Under 150 char meta description", "tags": ["tag1", "tag2", "tag3"]}}
 ```
 """
-        en_draft = call_gemini(en_prompt)
+        en_draft = call_gemini(en_prompt, stage="writer_en")
         
         print("[WriterAgent] Draft writing complete (KO + EN)")
         return {"ko": ko_draft, "en": en_draft}
@@ -447,120 +411,57 @@ Reference facts: {facts}
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Agent 4: FactVerifierAgent
-# ═══════════════════════════════════════════════════════════════════════════
-class FactVerifierAgent:
-    def run(self, drafts: dict, facts: str) -> dict:
-        print(f"\n[FactVerifierAgent] Verifying facts and extracting citations...")
-        
-        result = {}
-        for lang, draft in drafts.items():
-            print(f"[FactVerifierAgent] Verifying {lang.upper()} draft...")
-            result[lang] = self._verify_draft(draft, lang, facts)
-            
-        print("[FactVerifierAgent] Verification complete (KO + EN)")
-        return result
-
-    def _verify_draft(self, draft: str, lang: str, facts: str) -> dict:
-        lang_name = "Korean" if lang == "ko" else "English"
-        lang_instruction = "in Korean" if lang == "ko" else "in English"
-        
-        prompt = f"""
-You are a scientific fact-checker. Review the following {lang_name} blog post draft against the provided Reference Facts.
-
-Reference Facts:
-{facts}
-
-Draft to check:
-{draft}
-
-Tasks:
-1. Identify any factual claims made in the draft (e.g. statistics, technical claims, definitions, principles).
-2. Cross-reference them with the Reference Facts.
-3. Generate a "Verification Report" {lang_instruction}.
-4. Ensure the report has:
-   - "Factual Check": A list of claims verified, along with any corrections for claims that are unverified, exaggerated, or incorrect.
-   - "Verified Citations": A list of specific titles and links/DOIs from the Reference Facts that directly back up the content of this draft.
-
-Format your output as a clean JSON block (pure JSON, no other text):
-```json
-{{
-  "has_errors": true|false,
-  "corrections": "Description of corrections needed, or 'None'",
-  "report": "Detailed verification report text in markdown",
-  "citations": [
-    {{"title": "Source Title", "url": "URL/Link/DOI"}}
-  ]
-}}
-```
-"""
-        response_str = call_gemini(prompt)
-        try:
-            # Clean markdown code block wraps
-            response_str = re.sub(r"```json?\s*", "", response_str)
-            response_str = re.sub(r"```", "", response_str).strip()
-            parsed = json.loads(response_str)
-        except Exception as e:
-            print(f"[FactVerifierAgent] JSON parsing failed: {e}. Raw response:\n{response_str}")
-            parsed = {
-                "has_errors": False,
-                "corrections": "None",
-                "report": "Fact check passed successfully.",
-                "citations": []
-            }
-        return parsed
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# Agent 5: EditorAgent
+# Agent 4: EditorAgent (combined fact verification + copyediting)
 # ═══════════════════════════════════════════════════════════════════════════
 class EditorAgent:
-    def run(self, drafts: dict, verification_reports: dict, classification: dict, facts: str) -> dict:
-        print(f"\n[EditorAgent] Cross-reviewing and revising drafts based on verification reports...")
-        
+    def run(self, drafts: dict, classification: dict, facts: str) -> dict:
+        print("\n[EditorAgent] Fact-checking and copyediting drafts in one pass...")
+        references = extract_references(facts)
         result = {}
         for lang, draft in drafts.items():
-            print(f"[EditorAgent] Copyediting {lang.upper()}...")
-            report = verification_reports.get(lang, {})
-            result[lang] = self._review_and_fix(draft, report, lang, classification, facts)
-        
-        print("[EditorAgent] Copyediting complete (KO + EN)")
+            print(f"[EditorAgent] Reviewing {lang.upper()} against collected sources...")
+            reviewed = self._review_and_fix(draft, lang, classification, facts)
+            final = append_references(reviewed, lang, references)
+            validation = validate_post(
+                final,
+                lang,
+                source_urls=[reference["url"] for reference in references],
+            )
+            for warning in validation.warnings:
+                print(f"[ContentValidator:{lang}] Warning: {warning}")
+            if not validation.valid:
+                raise ContentValidationError(lang, validation.errors)
+            result[lang] = final
+
+        print("[EditorAgent] Combined verification and copyediting complete (KO + EN)")
         return result
-    
-    def _review_and_fix(self, draft: str, report: dict, lang: str, classification: dict, facts: str) -> str:
+
+    def _review_and_fix(self, draft: str, lang: str, classification: dict, facts: str) -> str:
         lang_name = "Korean" if lang == "ko" else "English"
         lang_instruction = "in Korean" if lang == "ko" else "in English"
-        
-        corrections = report.get("corrections", "None")
-        citations_list = report.get("citations", [])
-        
-        # Format references markdown
-        ref_title = "참고자료" if lang == "ko" else "References"
-        ref_lines = []
-        for citation in citations_list:
-            title = citation.get("title", "Source Link")
-            url = citation.get("url", "#")
-            ref_lines.append(f"- [{title}]({url})")
-        
-        references_section = ""
-        if ref_lines:
-            references_section = f"\n\n## {ref_title}\n\n" + "\n".join(ref_lines)
-            
-        prompt = f"""
-You are a strict blog editor. Review the following {lang_name} draft, apply the corrections provided by the Fact-Checker, and ensure all style rules are met.
 
-**Fact-Checker Corrections:**
-{corrections}
+        prompt = f"""
+You are both a strict scientific fact-checker and a professional {lang_name} blog editor.
+Review the draft directly against the collected reference facts, correct it, and return the complete final article in one pass.
+
+**Topic mode:** {classification.get('mode', 'trivia')}
+
+**Collected reference facts:**
+---
+{facts}
+---
 
 **Review checklist:**
-1. ✅ Apply corrections: Correct any false claims, inaccuracies, or logical leaps mentioned in the corrections list above.
-2. ✅ Tone and manner: Is the tone consistent and natural?
-3. ✅ Markdown: Are ## headers, **, `, > etc. syntactically correct?
-4. ✅ Structure: Are the introduction, body, and conclusion clearly defined?
-5. ✅ json_meta block: Does it include title, description, and tags?
-6. ✅ Mermaid syntax: Are all node labels wrapped in double quotes?
+1. Fact-check every statistic, definition, causal claim, and technical assertion against the collected facts.
+2. Remove, qualify, or correct claims that the references do not support. Never invent a correction.
+3. Preserve the requested depth, examples, tables, code/configuration, and overall article length.
+4. Make tone and phrasing natural for {lang_name} readers.
+5. Repair Markdown syntax and keep at least two `##` sections.
+6. Preserve a valid `json_meta` block containing title, description, and a tags array.
+7. Ensure all Mermaid node labels are wrapped in double quotes.
    - Correct: `A["text (with parentheses)"]`
-   - Wrong:   `A[text (with parentheses)]` ← must be fixed
+   - Wrong: `A[text (with parentheses)]`
+8. Do not add a References/참고자료 section and do not invent URLs. The pipeline appends verified source links deterministically.
 
 **Draft:**
 ---
@@ -568,22 +469,12 @@ You are a strict blog editor. Review the following {lang_name} draft, apply the 
 ---
 
 **Output rules:**
-- Immediately output the corrected final version of the draft ({lang_instruction}).
+- Output only the corrected final article {lang_instruction}.
 - Ensure the `json_meta` block is included at the very end of your response.
 - Do NOT output any editor comments, explanations, or notes outside the draft body.
 """
-        final = call_gemini(prompt)
-        
-        # Append references section before the json_meta block (so it goes into the post body)
-        meta_match = re.search(r"(```json_meta\s*\{.*?\}\s*```)", final, re.DOTALL)
-        if meta_match:
-            meta_block = meta_match.group(1)
-            body = final.replace(meta_block, "").strip()
-            final = body + references_section + "\n\n" + meta_block
-        else:
-            final = final.strip() + references_section
-            
-        return final
+        final = call_gemini(prompt, stage=f"editor_{lang}")
+        return final.strip()
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -689,13 +580,18 @@ description: "{self._escape_yaml(description)}"
 # Main Pipeline
 # ═══════════════════════════════════════════════════════════════════════════
 def main():
+    reset_pipeline_result()
     print("=" * 60)
     print(f"🤖 Multi-Agent Blog Generator started")
     print(f"📝 Input: {QUERY_INPUT}")
     print(f"🧠 Model: {GEMINI_MODEL}")
     print("=" * 60)
     
-    send_telegram(CHAT_ID, f"🤖 *Agent pipeline started*\n\n📝 Topic: `{QUERY_INPUT}`\n\n`[1/6]` Classifying topic...")
+    send_telegram(
+        CHAT_ID,
+        f"🤖 *Agent pipeline started*\n\n📝 Topic: `{QUERY_INPUT}`\n\n"
+        f"Gemini budget: `4` successful calls\n`[1/5]` Classifying topic locally...",
+    )
     
     try:
         # ─── Step 1: Classify ─────────────────────────────────────────
@@ -703,8 +599,8 @@ def main():
         classification = classifier.run(QUERY_INPUT)
         
         send_telegram(CHAT_ID, 
-            f"✅ `[1/6]` Classification complete: *{'Trivia Vault' if classification['mode'] == 'trivia' else 'Engineer Mode'}*\n"
-            f"🔍 `[2/6]` Collecting scholarly facts (arXiv/Crossref/Books)..."
+            f"✅ `[1/5]` Local classification complete: *{'Trivia Vault' if classification['mode'] == 'trivia' else 'Engineer Mode'}*\n"
+            f"🔍 `[2/5]` Collecting scholarly facts (arXiv/Crossref/Books)..."
         )
         
         # ─── Step 2: Search ───────────────────────────────────────────
@@ -712,7 +608,8 @@ def main():
         facts = search.run(classification)
         
         send_telegram(CHAT_ID, 
-            f"✅ `[2/6]` Fact collection complete\n✍️ `[3/6]` Writer agent drafting post..."
+            f"✅ `[2/5]` Fact collection complete without Gemini summarization\n"
+            f"✍️ `[3/5]` Writer agent drafting KO + EN posts..."
         )
         
         # ─── Step 3: Write ────────────────────────────────────────────
@@ -720,26 +617,32 @@ def main():
         drafts = writer.run(QUERY_INPUT, classification, facts)
         
         send_telegram(CHAT_ID, 
-            f"✅ `[3/6]` Drafts complete (KO + EN)\n🛡️ `[4/6]` FactVerifier agent validating claims..."
+            f"✅ `[3/5]` Drafts complete (KO + EN)\n"
+            f"🛡️ `[4/5]` Combined fact-check and copyedit in progress..."
         )
-        
-        # ─── Step 4: Verify ───────────────────────────────────────────
-        verifier = FactVerifierAgent()
-        verification_reports = verifier.run(drafts, facts)
-        
-        send_telegram(CHAT_ID, 
-            f"✅ `[4/6]` Verification reports ready\n🔍 `[5/6]` Editor agent copying & adding references..."
-        )
-        
-        # ─── Step 5: Edit ─────────────────────────────────────────────
+
+        # ─── Step 4: Combined fact verification, editing, and local validation
         editor = EditorAgent()
-        final_posts = editor.run(drafts, verification_reports, classification, facts)
-        
+        final_posts = editor.run(drafts, classification, facts)
+
+        expected_successful_calls = 4
+        if usage_tracker.successful_calls != expected_successful_calls:
+            raise RuntimeError(
+                "Gemini call budget mismatch: "
+                f"expected {expected_successful_calls}, got {usage_tracker.successful_calls}"
+            )
+        print(
+            f"[GeminiBudget] Standard pipeline completed with "
+            f"{usage_tracker.successful_calls} successful calls "
+            f"({usage_tracker.api_attempts} total attempts)."
+        )
+
         send_telegram(CHAT_ID, 
-            f"✅ `[5/6]` Copyediting complete\n💾 `[6/6]` Saving files and pushing to Git..."
+            f"✅ `[4/5]` Fact-check, copyedit, and local validation complete\n"
+            f"💾 `[5/5]` Saving files and pushing to Git..."
         )
         
-        # ─── Step 6: Save files ──────────────────────────────────────
+        # ─── Step 5: Save files ──────────────────────────────────────
         file_writer = FileWriterAgent()
         created_files = file_writer.run(final_posts, classification)
         
@@ -753,12 +656,22 @@ def main():
         # Pass file list via environment variable (shared between GitHub Actions steps)
         with open(os.environ.get("GITHUB_ENV", "/dev/null"), "a") as env_file:
             env_file.write(f"CREATED_FILES={','.join(created_files)}\n")
+
+        write_pipeline_result(
+            "success",
+            usage_tracker,
+            created_files=created_files,
+        )
         
     except Exception as e:
         print(f"\n❌ Pipeline error: {e}")
         import traceback
         traceback.print_exc()
-        send_telegram(CHAT_ID, f"❌ *Error occurred*\n\n`{str(e)[:200]}`")
+        write_pipeline_result("failed", usage_tracker, error=e)
+        # GitHub Actions sends the single final error notification in notify.py.
+        # Keep direct execution useful without producing duplicate workflow messages.
+        if os.environ.get("GITHUB_ACTIONS", "").lower() != "true":
+            send_telegram(CHAT_ID, f"❌ *Error occurred*\n\n`{str(e)[:200]}`")
         sys.exit(1)
 
 

@@ -6,6 +6,41 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.12.0] — 2026-07-14
+
+### Added
+- **Local Content Quality Layer**: Added deterministic topic classification, source-title/URL extraction, reference insertion, metadata checks, Markdown fence checks, minimum content floors, and structural validation without additional Gemini requests.
+- **Four-Call Budget Guard**: The standard pipeline now verifies that exactly four Gemini calls succeeded before writing posts.
+- **Stage-Specific Generation Settings**: Draft stages retain creative temperature while source-based editing uses a lower temperature and bounded output limits.
+- **Localized Wikipedia Search**: Korean queries now use Korean Wikipedia while other queries continue to use English Wikipedia.
+- **Pipeline Budget Tests**: Added offline tests that reject reintroduction of classifier, search-enrichment, or standalone verifier Gemini stages, plus a fake-service integration test that generates both post files with exactly four successful calls.
+
+### Changed
+- **Gemini Calls Reduced by 50%**: Normal KO+EN generation now uses four successful calls instead of eight: two drafts and two combined fact-check/edit calls.
+- **Local Classification**: Replaced the Gemini classifier request with deterministic bilingual topic rules and local keyword extraction.
+- **Direct Search Facts**: Removed the Gemini search-enrichment request and pass collected source data directly to both writing and review stages.
+- **Combined Verification and Editing**: Merged the separate per-language FactVerifier and Editor calls into one source-grounded review call per language.
+- **Deterministic References**: Source links are extracted from collected API results and appended locally so the editor cannot invent citation URLs.
+
+### Removed
+- **Standalone FactVerifierAgent**: Removed the two-call verification pass and its unsafe behavior that treated malformed verification JSON as a successful fact check.
+
+---
+
+## [1.11.1] — 2026-07-14
+
+### Added
+- **Gemini Usage Tracking**: Added a shared runtime that records API attempts and response token usage for every pipeline stage.
+- **Structured Pipeline Result**: Added `.pipeline_result.json` handoff data so the final notification step can report the exact failed stage, error category, retry metadata, and per-run usage.
+- **Offline Runtime Tests**: Added unit coverage for daily and per-minute quota classification, daily-quota no-retry behavior, transient retries, token aggregation, structured results, and Telegram quota wording. The Telegram workflow runs these tests before making any Gemini request.
+
+### Changed
+- **Quota-Aware Retry Policy**: Daily request quota (`RPD`) exhaustion now stops immediately, while `RPM`, `TPM`, timeouts, and temporary service failures retain bounded retries.
+- **Actionable Telegram Errors**: Replaced the generic repeated-call failure with distinct messages for daily quota exhaustion, per-minute request/token limits, authentication errors, invalid requests, timeouts, and service outages.
+- **Accurate Completion Wording**: The generation workflow now reports that content was saved and Pages deployment started instead of claiming that the separate Pages workflow has already completed.
+
+---
+
 ## [1.11.0] — 2026-07-11
 
 ### Added

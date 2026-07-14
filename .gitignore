@@ -35,3 +35,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local pipeline runtime state
+.pipeline_result.json
