@@ -9,8 +9,10 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 from content_quality import (  # noqa: E402
     ContentValidationError,
     append_references,
+    build_search_queries,
     classify_query,
     extract_references,
+    is_usable_search_result,
     normalize_metadata_block,
     validate_post,
 )
@@ -24,6 +26,27 @@ class ContentQualityTests(unittest.TestCase):
     def test_defaults_general_topics_to_trivia(self):
         self.assertEqual(classify_query("How was our Solar System formed?")["mode"], "trivia")
         self.assertEqual(classify_query("Discovering Adobe Architecture")["mode"], "trivia")
+
+    def test_builds_compact_korean_search_query(self):
+        queries = build_search_queries("싼타페에는 왜 터키석 보석을 많이 팔지?")
+
+        self.assertEqual(queries[0], "싼타페에는 왜 터키석 보석을 많이 팔지?")
+        self.assertEqual(queries[1], "싼타페 터키석 보석")
+
+    def test_builds_compact_english_search_query(self):
+        queries = build_search_queries("How does Kubernetes networking work?")
+
+        self.assertEqual(queries[1], "kubernetes networking")
+
+    def test_rejects_placeholder_search_results(self):
+        self.assertFalse(is_usable_search_result("No search results"))
+        self.assertFalse(is_usable_search_result("No Wikipedia pages found."))
+        self.assertFalse(is_usable_search_result("Wikipedia Search Error: timeout"))
+        self.assertTrue(
+            is_usable_search_result(
+                "[Wikipedia] Title: Turquoise\nLink: https://en.wikipedia.org/wiki/Turquoise"
+            )
+        )
 
     def test_extracts_and_deduplicates_search_references(self):
         facts = """

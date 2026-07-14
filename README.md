@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.12.0-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.12.1-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -223,7 +223,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.12.0** — Reduced standard KO+EN generation from eight Gemini calls to four with local classification, deterministic references, and local validation.
+**v1.12.1** — Improved bilingual sparse-source recovery, prevented Editor over-compression through stricter output rules, and added exact local validation reasons to Telegram errors while retaining the four-call budget.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -234,6 +234,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.11.0**: Global Client-Side Search
 - **`[x]` v1.11.1**: Gemini Usage Tracking & Quota-Aware Telegram Notifications
 - **`[x]` v1.12.0**: Reduce the standard Gemini pipeline from 8 calls to 4 calls
+- **`[x]` v1.12.1**: Harden bilingual source collection and Editor validation
 - **v1.13.0**: Cloud Monitoring integration for approximate remaining free-tier quota
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 

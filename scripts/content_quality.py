@@ -90,11 +90,125 @@ META_PATTERN = re.compile(r"```json_meta\s*(\{.*?\})\s*```", re.DOTALL)
 JSON_FENCE_PATTERN = re.compile(r"```json\s*(\{.*?\})\s*```", re.DOTALL)
 URL_PATTERN = re.compile(r"https?://[^\s)>\]}`]+")
 
+NO_RESULT_MARKERS = (
+    "no search results",
+    "no books found.",
+    "no wikipedia pages found.",
+    "no publications found.",
+)
+
+SEARCH_STOPWORDS = {
+    "about",
+    "explain",
+    "how",
+    "please",
+    "what",
+    "why",
+    "왜",
+    "무엇",
+    "어떻게",
+    "많이",
+    "정말",
+    "이유",
+    "알려줘",
+    "설명",
+    "팔지",
+    "파는",
+}
+
+KOREAN_PARTICLES = (
+    "에서는",
+    "에게는",
+    "으로는",
+    "에는",
+    "에서",
+    "에게",
+    "으로",
+    "부터",
+    "까지",
+    "처럼",
+    "보다",
+    "로는",
+    "과는",
+    "와는",
+    "은",
+    "는",
+    "이",
+    "가",
+    "을",
+    "를",
+    "의",
+    "에",
+    "도",
+    "만",
+    "과",
+    "와",
+    "로",
+)
+
 
 def _contains_term(text: str, term: str) -> bool:
     if re.search(r"[가-힣]", term) or " " in term:
         return term in text
     return re.search(rf"(?<![a-z0-9]){re.escape(term)}(?![a-z0-9])", text) is not None
+
+
+def _strip_korean_particle(token: str) -> str:
+    for particle in KOREAN_PARTICLES:
+        if token.endswith(particle) and len(token) >= len(particle) + 2:
+            return token[: -len(particle)]
+    return token
+
+
+def build_search_queries(query: str, limit: int = 4) -> list[str]:
+    """Create a compact query variant without using another model call."""
+    cleaned = re.sub(r"\s+", " ", query).strip()
+    if not cleaned:
+        return []
+
+    tokens = re.findall(r"[A-Za-z][A-Za-z0-9+.#-]*|[가-힣]{2,}", cleaned)
+    compact_tokens: list[str] = []
+    seen = set()
+    for token in tokens:
+        normalized = _strip_korean_particle(token).strip().lower()
+        if (
+            not normalized
+            or normalized in SEARCH_STOPWORDS
+            or normalized in STOPWORDS
+            or normalized in seen
+        ):
+            continue
+        seen.add(normalized)
+        compact_tokens.append(normalized)
+
+    compact_tokens = compact_tokens[:6]
+    compact = " ".join(compact_tokens)
+    candidates = [cleaned, compact]
+    if len(compact_tokens) >= 2:
+        candidates.extend(
+            (
+                " ".join(compact_tokens[:2]),
+                " ".join(compact_tokens[-2:]),
+            )
+        )
+
+    queries: list[str] = []
+    for candidate in candidates:
+        if candidate and candidate not in queries:
+            queries.append(candidate)
+        if len(queries) >= limit:
+            break
+    return queries
+
+
+def is_usable_search_result(result: str) -> bool:
+    """Reject API errors and placeholder strings that contain no source facts."""
+    normalized = re.sub(r"\s+", " ", (result or "")).strip().lower()
+    if not normalized:
+        return False
+    if normalized in NO_RESULT_MARKERS:
+        return False
+    return not any(marker in normalized for marker in ("search api error:", "search error:"))
 
 
 def classify_query(query: str) -> dict:

@@ -27,8 +27,10 @@ import google.generativeai as genai
 from content_quality import (
     ContentValidationError,
     append_references,
+    build_search_queries,
     classify_query,
     extract_references,
+    is_usable_search_result,
     validate_post,
 )
 from gemini_runtime import (
@@ -245,40 +247,53 @@ class ScholarlySearchAgent:
         query = classification.get("search_query", classification.get("topic_en", ""))
         print(f"\n[ScholarlySearchAgent] Collecting information for '{query}' (mode: {mode})...")
         
+        queries = build_search_queries(query)
+        print(f"[ScholarlySearchAgent] Search variants: {queries}")
+
         facts = []
-        
-        # General baseline search
-        ddg_baseline = search_duckduckgo(query)
-        if "Search API error" not in ddg_baseline and ddg_baseline.strip():
-            facts.append("=== Web Summary (DuckDuckGo) ===\n" + ddg_baseline)
-        
-        wiki_data = search_wikipedia(query)
-        if "Wikipedia Search Error" not in wiki_data and wiki_data.strip():
-            facts.append("=== Authoritative Reference (Wikipedia) ===\n" + wiki_data)
-            
+        seen_results = set()
+
+        def add_result(label: str, result: str) -> None:
+            normalized = result.strip()
+            if not is_usable_search_result(normalized) or normalized in seen_results:
+                return
+            seen_results.add(normalized)
+            facts.append(f"=== {label} ===\n{normalized}")
+
+        # DuckDuckGo's instant-answer endpoint is useful for broad queries but
+        # not for every keyword fragment, so limit it to the first two variants.
+        for search_query in queries[:2]:
+            add_result("Web Summary (DuckDuckGo)", search_duckduckgo(search_query))
+
+        # Wikipedia full-text search is cheap and benefits from pairwise entity
+        # queries such as "Santa Fe" and "turquoise jewelry".
+        for search_query in queries:
+            add_result("Authoritative Reference (Wikipedia)", search_wikipedia(search_query))
+
+        primary_query = queries[-1] if queries else query
         if mode == "trivia":
-            # Trivia mode: google books
-            books_data = search_google_books(query)
-            if "Google Books Search Error" not in books_data and books_data.strip():
-                facts.append("=== Book References (Google Books) ===\n" + books_data)
+            add_result("Book References (Google Books)", search_google_books(primary_query))
         else:
-            # Engineer mode: arXiv, Crossref, and Cisco/Arista/standards vendor references
-            arxiv_data = search_arxiv(query)
-            if "arXiv Search Error" not in arxiv_data and arxiv_data.strip():
-                facts.append("=== Academic Literature (arXiv) ===\n" + arxiv_data)
-                
-            crossref_data = search_crossref(query)
-            if "Crossref Search Error" not in crossref_data and crossref_data.strip():
-                facts.append("=== Scholarly Publications (Crossref) ===\n" + crossref_data)
-                
-            # Vendor whitepaper search via DuckDuckGo
-            vendor_query = f"{query} (site:cisco.com OR site:arista.com OR site:ietf.org OR site:rfc-editor.org)"
-            vendor_ddg = search_duckduckgo(vendor_query)
-            if "Search API error" not in vendor_ddg and vendor_ddg.strip() and "No search results" not in vendor_ddg:
-                facts.append("=== Vendor Whitepapers & Standards (Cisco/Arista/IETF) ===\n" + vendor_ddg)
+            # Engineer mode: arXiv, Crossref, and standards/vendor references.
+            add_result("Academic Literature (arXiv)", search_arxiv(primary_query))
+            add_result("Scholarly Publications (Crossref)", search_crossref(primary_query))
+
+            vendor_query = (
+                f"{primary_query} "
+                "(site:cisco.com OR site:arista.com OR site:ietf.org OR site:rfc-editor.org)"
+            )
+            add_result(
+                "Vendor Whitepapers & Standards (Cisco/Arista/IETF)",
+                search_duckduckgo(vendor_query),
+            )
         
         combined_facts = "\n\n".join(facts)
         print(f"[ScholarlySearchAgent] Collection complete (length: {len(combined_facts)} chars)")
+        if len(combined_facts) < 300:
+            print(
+                "[ScholarlySearchAgent] Warning: source coverage is sparse; "
+                "writer/editor prompts must avoid unsupported specifics."
+            )
         return combined_facts or "No external reference facts were available. Avoid unsupported specifics."
 
 
@@ -322,10 +337,32 @@ Reference facts: {facts}
 
 **SEO Meta (at the end as JSON):**
 ```json_meta
-{{"title": "Compelling Korean title", "description": "Meta description within 150 characters", "tags": ["tag1", "tag2", "tag3"]}}
+{{"title": "Compelling Korean title", "description": "Meta description within 150 characters", "tags": ["tag1", "tag2", "tag3"], "search_query_en": "concise English source-search query"}}
 ```
+- `search_query_en` must identify the intended place, person, object, or concept in natural English so the pipeline can collect English references without another Gemini call.
 """
         ko_draft = call_gemini(ko_prompt, stage="writer_ko")
+
+        supplemental_query = self._extract_english_search_query(ko_draft)
+        english_topic = supplemental_query or query
+        if supplemental_query and supplemental_query.casefold() != query.casefold():
+            print(
+                "[WriterAgent] Expanding references with writer-provided English query: "
+                f"'{supplemental_query}'"
+            )
+            supplemental_facts = ScholarlySearchAgent().run(
+                {
+                    "mode": mode,
+                    "search_query": supplemental_query,
+                    "topic_en": supplemental_query,
+                }
+            )
+            if (
+                not supplemental_facts.startswith("No external reference facts were available")
+                and supplemental_facts not in facts
+            ):
+                facts = f"{facts}\n\n{supplemental_facts}".strip()
+            classification["topic_en"] = supplemental_query[:60]
         
         # ─── English draft ────────────────────────────────────────────
         en_style = self._get_en_style(mode)
@@ -333,7 +370,7 @@ Reference facts: {facts}
 You are a professional tech blogger. Write a blog post in natural, fluent English on the following topic.
 The post must be an in-depth, comprehensive technical article.
 
-Topic: {query}
+Topic: {english_topic}
 Reference facts: {facts}
 {en_style}
 
@@ -365,7 +402,19 @@ Reference facts: {facts}
         en_draft = call_gemini(en_prompt, stage="writer_en")
         
         print("[WriterAgent] Draft writing complete (KO + EN)")
-        return {"ko": ko_draft, "en": en_draft}
+        return {"ko": ko_draft, "en": en_draft}, facts
+
+    @staticmethod
+    def _extract_english_search_query(draft: str) -> str:
+        match = re.search(r"```json_meta\s*(\{.*?\})\s*```", draft, re.DOTALL)
+        if not match:
+            return ""
+        try:
+            metadata = json.loads(match.group(1))
+        except json.JSONDecodeError:
+            return ""
+        query = str(metadata.get("search_query_en") or "").strip()
+        return re.sub(r"\s+", " ", query)[:160]
     
     def _get_ko_style(self, mode: str) -> str:
         if mode == "trivia":
@@ -455,6 +504,9 @@ Review the draft directly against the collected reference facts, correct it, and
 1. Fact-check every statistic, definition, causal claim, and technical assertion against the collected facts.
 2. Remove, qualify, or correct claims that the references do not support. Never invent a correction.
 3. Preserve the requested depth, examples, tables, code/configuration, and overall article length.
+   - Korean output must remain at least 1200 characters.
+   - English output must remain at least 450 words.
+   - Keep at least two level-2 (`##`) section headings.
 4. Make tone and phrasing natural for {lang_name} readers.
 5. Repair Markdown syntax and keep at least two `##` sections.
 6. Preserve a valid `json_meta` block containing title, description, and a tags array.
@@ -614,7 +666,7 @@ def main():
         
         # ─── Step 3: Write ────────────────────────────────────────────
         writer = WriterAgent()
-        drafts = writer.run(QUERY_INPUT, classification, facts)
+        drafts, facts = writer.run(QUERY_INPUT, classification, facts)
         
         send_telegram(CHAT_ID, 
             f"✅ `[3/5]` Drafts complete (KO + EN)\n"

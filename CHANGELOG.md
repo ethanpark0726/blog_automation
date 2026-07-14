@@ -6,6 +6,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.12.1] — 2026-07-14
+
+### Fixed
+- **Sparse Source Collection**: Long question-style inputs now produce compact and pairwise keyword queries. The existing Korean Writer call also returns an English source-search query, which expands references before English drafting and editing without adding Gemini calls.
+- **False Source Data**: Placeholder responses such as `No search results` and `No Wikipedia pages found` are no longer passed to Writer and Editor agents as reference facts.
+- **Editor Over-Compression Prevention**: The Editor contract now explicitly preserves minimum length and section structure; invalid reviewed content remains blocked rather than falling back to an unreviewed draft.
+- **Actionable Validation Notifications**: Telegram failure messages now include the exact local validation reason recorded in the structured pipeline result.
+
+### Changed
+- **Editor Output Contract**: The review prompt explicitly preserves at least two `##` headings and the Korean/English publication safety floors without adding a repair call.
+
+---
+
 ## [1.12.0] — 2026-07-14
 
 ### Added

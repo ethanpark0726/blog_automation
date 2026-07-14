@@ -46,6 +46,7 @@ def article(lang: str) -> str:
             "title": "태양계 형성 과정",
             "description": "태양계가 형성된 과정을 설명합니다.",
             "tags": ["태양계", "과학"],
+            "search_query_en": "formation of the Solar System",
         }
     else:
         body = "## Introduction\n\n" + ("This is a source-grounded explanation of solar system formation. " * 650)
@@ -83,11 +84,17 @@ class PipelineIntegrationTests(unittest.TestCase):
         pipeline.call_gemini = fake_call
         pipeline.send_telegram = lambda *_args, **_kwargs: None
         pipeline.search_duckduckgo = lambda _query: "[Overview] Solar system overview"
-        pipeline.search_wikipedia = lambda _query: (
-            "[Wikipedia] Title: Formation and evolution of the Solar System\n"
-            "Snippet: Source summary.\n"
-            "Link: https://en.wikipedia.org/wiki/Formation_and_evolution_of_the_Solar_System"
-        )
+        search_queries = []
+
+        def fake_wikipedia(query):
+            search_queries.append(query)
+            return (
+                "[Wikipedia] Title: Formation and evolution of the Solar System\n"
+                "Snippet: Source summary.\n"
+                "Link: https://en.wikipedia.org/wiki/Formation_and_evolution_of_the_Solar_System"
+            )
+
+        pipeline.search_wikipedia = fake_wikipedia
         pipeline.search_google_books = lambda _query: "No books found."
 
         original_cwd = Path.cwd()
@@ -118,6 +125,7 @@ class PipelineIntegrationTests(unittest.TestCase):
         self.assertEqual(result["usage"]["api_attempts"], 4)
         self.assertEqual(len(ko_files), 1)
         self.assertEqual(len(en_files), 1)
+        self.assertIn("formation of the Solar System", search_queries)
 
 
 if __name__ == "__main__":

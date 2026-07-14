@@ -3,6 +3,7 @@
 
 import os
 import json
+import re
 import urllib.request
 from pathlib import Path
 
@@ -106,6 +107,8 @@ def api_failure_message(error: dict, logs_url: str) -> str:
     category = error.get("category", "pipeline_error")
     stage = error.get("stage") or "unknown"
     status_code = error.get("status_code")
+    detail = re.sub(r"\s+", " ", str(error.get("message") or "")).strip()
+    detail = detail.replace("`", "'")[:350]
 
     titles = {
         "authentication_error": "🔐 *Gemini API 인증 또는 권한 오류*",
@@ -118,10 +121,11 @@ def api_failure_message(error: dict, logs_url: str) -> str:
     }
     title = titles.get(category, titles["pipeline_error"])
     status_line = f"\nHTTP 상태: `{status_code}`" if status_code else ""
+    detail_line = f"\n상세 사유: `{detail}`" if detail else ""
     return (
         f"{title}\n\n"
         f"📝 Topic: `{QUERY_INPUT}`\n"
-        f"실패 단계: `{stage}`{status_line}\n\n"
+        f"실패 단계: `{stage}`{status_line}{detail_line}\n\n"
         f"🔍 [GitHub Actions 로그 확인]({logs_url})"
     )
 
