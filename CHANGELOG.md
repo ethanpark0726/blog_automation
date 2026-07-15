@@ -6,6 +6,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.14.0] — 2026-07-14
+
+### Added
+- **Failed-Run Checkpoints**: Research drafts, collected facts, validated English content, and Korean localization are cached after each completed stage and restored on a GitHub Actions rerun.
+- **Duplicate Request Guard**: Generated posts store a normalized request fingerprint; already-published Telegram inputs are blocked before any Gemini call.
+- **Checkpoint Workflow Cache**: GitHub Actions restores checkpoint data for subsequent attempts of the same workflow run and clears it after a successful push.
+
+### Changed
+- **Three-Call Pipeline**: Research planning and provisional English drafting now share `research_writer_en`, followed by `editor_en` and `localizer_ko`.
+- **Dynamic Resume Budget**: A fresh run uses three successful Gemini calls, while a resumed run invokes only unfinished model stages.
+
+---
+
 ## [1.13.0] — 2026-07-14
 
 ### Added

@@ -118,6 +118,7 @@ def api_failure_message(error: dict, logs_url: str) -> str:
         "content_validation_error": "🧪 *생성된 콘텐츠 로컬 검증 실패*",
         "research_plan_error": "🧭 *영어 자료 조사 계획 생성 실패*",
         "source_coverage_error": "📚 *영어 참고자료 부족*",
+        "duplicate_request": "♻️ *이미 게시된 요청*",
         "unknown_api_error": "❌ *Gemini API 알 수 없는 오류*",
         "pipeline_error": "❌ *블로그 생성 파이프라인 오류*",
     }

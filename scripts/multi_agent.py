@@ -2,20 +2,20 @@
 """
 Multi-Agent Blog Generation System
 ====================================
-Telegram input → [Planner] → [English Research] → [English Writer/Editor] → [KO Localizer] → Jekyll Markdown
+Telegram input → [Research Writer] → [English Research/Editor] → [KO Localizer] → Jekyll Markdown
 
 Agent configuration:
-  1. ResearchPlannerAgent : Resolve multilingual input into English research queries
+  1. ResearchWriterAgent  : Resolve English queries and create a provisional draft
   2. ScholarlySearchAgent : Collect English-language source facts without Gemini
-  3. EnglishWriterAgent   : Generate the canonical English draft
-  4. EnglishEditorAgent   : Fact-check and validate the canonical English article
-  5. KoreanLocalizerAgent : Localize the validated article without adding claims
-  6. FileWriterAgent      : Save paired Jekyll posts
+  3. EnglishEditorAgent   : Ground and validate the canonical English article
+  4. KoreanLocalizerAgent : Localize the validated article without adding claims
+  5. FileWriterAgent      : Save paired Jekyll posts with duplicate fingerprints
 """
 
 import os
 import sys
 import json
+import hashlib
 import re
 import urllib.request
 import urllib.parse
@@ -62,11 +62,13 @@ model = genai.GenerativeModel(model_name=GEMINI_MODEL)
 usage_tracker = UsageTracker()
 
 STAGE_GENERATION_CONFIGS = {
-    "research_planner": {"temperature": 0.1, "max_output_tokens": 1024},
-    "writer_en": {"temperature": 0.7, "max_output_tokens": 12288},
+    "research_writer_en": {"temperature": 0.6, "max_output_tokens": 12288},
     "editor_en": {"temperature": 0.2, "max_output_tokens": 12288},
     "localizer_ko": {"temperature": 0.2, "max_output_tokens": 8192},
 }
+
+STANDARD_SUCCESSFUL_CALLS = 3
+CACHE_DIR = Path(".pipeline_cache")
 
 KST = timezone(timedelta(hours=9))
 
@@ -243,7 +245,7 @@ class ResearchPlanError(ValueError):
     """Raised when the English research plan cannot be used safely."""
 
     category = "research_plan_error"
-    stage = "research_planner"
+    stage = "research_writer_en"
 
 
 class SourceCoverageError(ValueError):
@@ -253,44 +255,119 @@ class SourceCoverageError(ValueError):
     stage = "english_source_coverage"
 
 
-class ResearchPlannerAgent:
-    def run(self, query: str, classification: dict) -> dict:
-        print("\n[ResearchPlannerAgent] Resolving input into English research queries...")
+class DuplicateRequestError(ValueError):
+    """Raised before API use when the same request was already published."""
+
+    category = "duplicate_request"
+    stage = "duplicate_guard"
+
+
+class PipelineCheckpoint:
+    """Persist completed model stages so a failed workflow rerun can resume."""
+
+    def __init__(self, fingerprint: str) -> None:
+        self.path = CACHE_DIR / f"{fingerprint}.json"
+        self.data = self._load(fingerprint)
+
+    def _load(self, fingerprint: str) -> dict:
+        try:
+            payload = json.loads(self.path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, OSError, json.JSONDecodeError):
+            return {"fingerprint": fingerprint}
+        if payload.get("fingerprint") != fingerprint:
+            return {"fingerprint": fingerprint}
+        print(f"[Checkpoint] Restored stages: {sorted(payload.get('stages', []))}")
+        return payload
+
+    def has(self, stage: str) -> bool:
+        return stage in self.data.get("stages", [])
+
+    def get(self, key: str):
+        return self.data.get(key)
+
+    def save(self, stage: str, **values) -> None:
+        stages = set(self.data.get("stages", []))
+        stages.add(stage)
+        self.data.update(values)
+        self.data["stages"] = sorted(stages)
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        temp_path = self.path.with_suffix(".tmp")
+        temp_path.write_text(
+            json.dumps(self.data, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        temp_path.replace(self.path)
+        print(f"[Checkpoint] Saved stage: {stage}")
+
+
+def request_fingerprint(query: str) -> str:
+    normalized = re.sub(r"\s+", " ", query).strip().casefold()
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:20]
+
+
+def ensure_request_is_new(fingerprint: str) -> None:
+    marker = f'request_fingerprint: "{fingerprint}"'
+    for post_path in Path("_posts").glob("*/*.md"):
+        try:
+            header = post_path.read_text(encoding="utf-8")[:2000]
+        except OSError:
+            continue
+        if marker in header:
+            raise DuplicateRequestError(
+                f"This Telegram request was already published in {post_path.as_posix()}"
+            )
+
+
+class ResearchWriterAgent:
+    RESEARCH_PATTERN = re.compile(
+        r"```json_research\s*(\{.*?\})\s*```",
+        re.DOTALL,
+    )
+
+    def run(self, query: str, classification: dict) -> tuple[dict, str]:
+        mode = classification.get("mode", "trivia")
+        print("\n[ResearchWriterAgent] Resolving research intent and drafting English...")
         prompt = f"""
-You are a multilingual research planner. Resolve the user's intent and return a compact English research plan.
+You are a multilingual research planner and professional English blog writer.
+Interpret the user's question, disambiguate names from context, and write a provisional English article that will be fact-checked against external sources in the next stage.
 
 User input: {query}
-Local topic mode: {classification.get('mode', 'trivia')}
+Local topic mode: {mode}
 
-Return JSON only, with this exact schema:
+Article requirements:
+- Write 1200-2000 English words with at least two `##` headings.
+- Include detailed mechanisms, a comparison table, historical context, and practical examples.
+- For technical topics, include code/configuration and a valid Mermaid diagram with quoted labels.
+- Clearly qualify uncertain claims because external fact-checking happens after this draft.
+- End the article with a valid `json_meta` block containing title, description, and tags.
+
+After `json_meta`, append this machine-readable block:
+```json_research
 {{
   "canonical_topic_en": "clear natural-English topic",
   "search_queries_en": ["specific English query 1", "specific English query 2"],
-  "intent_summary_en": "one-sentence interpretation of the question"
+  "intent_summary_en": "one-sentence interpretation"
 }}
+```
 
-Rules:
-- Disambiguate misspellings and place/person/product names from context.
-- All values must be in English.
-- Provide 2-4 source-search queries, ordered from most specific to broadest.
-- Do not answer the question and do not include Markdown fences.
+All research-plan values must be English. Provide 2-4 queries ordered from specific to broad.
+Output only the complete English article followed by the `json_research` block.
 """
-        raw = call_gemini(prompt, stage="research_planner")
-        plan = self._parse_plan(raw)
+        raw = call_gemini(prompt, stage="research_writer_en")
+        plan, draft = self._parse_output(raw)
         classification["topic_en"] = plan["canonical_topic_en"][:60]
-        print(f"[ResearchPlannerAgent] Research plan complete: {plan}")
-        return plan
+        print(f"[ResearchWriterAgent] Plan and provisional draft complete: {plan}")
+        return plan, draft
 
-    @staticmethod
-    def _parse_plan(raw: str) -> dict:
-        cleaned = raw.strip()
-        fenced = re.search(r"```(?:json)?\s*(\{.*\})\s*```", cleaned, re.DOTALL)
-        if fenced:
-            cleaned = fenced.group(1)
+    @classmethod
+    def _parse_output(cls, raw: str) -> tuple[dict, str]:
+        match = cls.RESEARCH_PATTERN.search(raw)
+        if not match:
+            raise ResearchPlanError("Research writer did not return json_research metadata")
         try:
-            payload = json.loads(cleaned)
+            payload = json.loads(match.group(1))
         except json.JSONDecodeError as exc:
-            raise ResearchPlanError("Research planner returned invalid JSON") from exc
+            raise ResearchPlanError("Research writer returned invalid json_research JSON") from exc
 
         topic = str(payload.get("canonical_topic_en") or "").strip()
         raw_queries = payload.get("search_queries_en")
@@ -304,15 +381,19 @@ Rules:
                     queries.append(normalized[:160])
 
         if not topic or not re.search(r"[A-Za-z]", topic):
-            raise ResearchPlanError("Research planner did not return an English canonical topic")
+            raise ResearchPlanError("Research writer did not return an English canonical topic")
         if not queries or not all(re.search(r"[A-Za-z]", query) for query in queries):
-            raise ResearchPlanError("Research planner did not return usable English search queries")
+            raise ResearchPlanError("Research writer did not return usable English search queries")
 
-        return {
+        draft = cls.RESEARCH_PATTERN.sub("", raw).strip()
+        if "```json_meta" not in draft:
+            raise ResearchPlanError("Research writer draft is missing json_meta")
+        plan = {
             "canonical_topic_en": topic[:160],
             "search_queries_en": queries[:4],
             "intent_summary_en": str(payload.get("intent_summary_en") or "").strip()[:300],
         }
+        return plan, draft
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -407,76 +488,7 @@ class ScholarlySearchAgent:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Agent 3: WriterAgent
-# ═══════════════════════════════════════════════════════════════════════════
-class WriterAgent:
-    def run(self, classification: dict, plan: dict, facts: str) -> str:
-        mode = classification.get("mode", "engineer")
-        english_topic = plan["canonical_topic_en"]
-        print(f"\n[WriterAgent] Drafting canonical English post (mode: {mode})...")
-
-        en_style = self._get_en_style(mode)
-        en_prompt = f"""
-You are a professional tech blogger. Write a blog post in natural, fluent English on the following topic.
-The post must be an in-depth, comprehensive technical article.
-
-Topic: {english_topic}
-Reference facts: {facts}
-{en_style}
-
-**Required Format & Content Rules (ENG):**
-- Length: 1200-2000 words. Provide rich, detailed explanations. Do NOT summarize or write briefly.
-- No H1 title (it's in Front Matter)
-- Use ## or ### for subheadings
-- Use **bold** and `code` for emphasis
-- Use > blockquotes for key insights
-- Include a comprehensive technical analysis or detailed step-by-step conceptual breakdown.
-- Include concrete code blocks, configurations, or mathematical formulas.
-- Include a Markdown table summarizing features or Pros & Cons.
-- Include historical background or industry trade-offs.
-- For technical topics, include at least 1 Mermaid diagram:
-  ```mermaid
-  graph TD
-      A["Start"] --> B["Process"]
-  ```
-- ⚠️ **Mermaid Rule (CRITICAL)**: Always wrap ALL node labels in double quotes.
-  Parentheses (), Korean characters, and special chars break the parser.
-  Correct: `A["Hot CrossFit (heat stress)"]`
-  Wrong:   `A[Hot CrossFit (heat stress)]`
-
-**SEO Meta (at the end as JSON):**
-```json_meta
-{{"title": "Compelling English Title", "description": "Under 150 char meta description", "tags": ["tag1", "tag2", "tag3"]}}
-```
-"""
-        en_draft = call_gemini(en_prompt, stage="writer_en")
-        print("[WriterAgent] Canonical English draft complete")
-        return en_draft
-    
-    def _get_en_style(self, mode: str) -> str:
-        if mode == "trivia":
-            return """
-**Writing Style: Trivia Vault**
-- Audience: General public, beginners
-- Tone: Warm, friendly, conversational
-- Use everyday analogies to explain complex concepts
-- Minimize jargon; explain technical terms in parentheses
-- Use emojis appropriately (🎯, 💡, 🔧)
-"""
-        else:
-            return """
-**Writing Style: Engineer Mode**
-- Audience: Developers, IT professionals
-- Tone: Clear, authoritative, technical
-- Use technical terminology freely
-- Include code examples, benchmarks, and specifics
-- Discuss trade-offs and real-world implications
-- Leverage Mermaid diagrams and code blocks
-"""
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-# Agent 4: EnglishEditorAgent (canonical fact verification + copyediting)
+# Agent 3: EnglishEditorAgent (canonical fact verification + copyediting)
 # ═══════════════════════════════════════════════════════════════════════════
 class EditorAgent:
     def run(self, draft: str, classification: dict, facts: str) -> tuple[str, str]:
@@ -590,10 +602,10 @@ Output only the complete Korean article and its final `json_meta` block.
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Agent 6: FileWriterAgent
+# Agent 5: FileWriterAgent
 # ═══════════════════════════════════════════════════════════════════════════
 class FileWriterAgent:
-    def run(self, posts: dict, classification: dict) -> list:
+    def run(self, posts: dict, classification: dict, fingerprint: str) -> list:
         now_kst = datetime.now(KST)
         date_str = now_kst.strftime("%Y-%m-%d")
         datetime_str = now_kst.strftime("%Y-%m-%d %H:%M:%S +0900")
@@ -637,6 +649,7 @@ tags:
 {tags_yaml}
 lang: {lang}
 topic_id: "{topic_id}"
+request_fingerprint: "{fingerprint}"
 description: "{self._escape_yaml(description)}"
 ---
 
@@ -702,65 +715,120 @@ def main():
     send_telegram(
         CHAT_ID,
         f"🤖 *Agent pipeline started*\n\n📝 Topic: `{QUERY_INPUT}`\n\n"
-        f"Gemini budget: `4` successful calls\n`[1/5]` Planning English research...",
+        f"Gemini budget: `3` successful calls\n`[1/5]` Resolving and drafting English...",
     )
     
     try:
-        # ─── Step 1: Classify ─────────────────────────────────────────
+        fingerprint = request_fingerprint(QUERY_INPUT)
+        ensure_request_is_new(fingerprint)
+        checkpoint = PipelineCheckpoint(fingerprint)
+        executed_model_stages = 0
+
+        # ─── Step 1: Resolve research intent and draft English ─────────
         classifier = ClassifierAgent()
         classification = classifier.run(QUERY_INPUT)
-        planner = ResearchPlannerAgent()
-        research_plan = planner.run(QUERY_INPUT, classification)
-        
+
+        if (
+            checkpoint.has("research_writer")
+            and checkpoint.get("research_plan")
+            and checkpoint.get("english_draft")
+        ):
+            research_plan = checkpoint.get("research_plan")
+            english_draft = checkpoint.get("english_draft")
+            classification["topic_en"] = research_plan["canonical_topic_en"][:60]
+            print("[Checkpoint] Reusing research plan and provisional English draft")
+        else:
+            research_writer = ResearchWriterAgent()
+            research_plan, english_draft = research_writer.run(
+                QUERY_INPUT,
+                classification,
+            )
+            executed_model_stages += 1
+            checkpoint.save(
+                "research_writer",
+                research_plan=research_plan,
+                english_draft=english_draft,
+            )
+
         send_telegram(CHAT_ID, 
-            f"✅ `[1/5]` English research plan complete: `{research_plan['canonical_topic_en']}`\n"
+            f"✅ `[1/5]` English plan and provisional draft complete: `{research_plan['canonical_topic_en']}`\n"
             f"🔍 `[2/5]` Collecting English scholarly facts..."
         )
         
-        # ─── Step 2: Search ───────────────────────────────────────────
-        search = ScholarlySearchAgent()
-        facts = search.run(classification, research_plan)
+        # ─── Step 2: Search or restore collected facts ────────────────
+        if checkpoint.has("english_research") and checkpoint.get("facts"):
+            facts = checkpoint.get("facts")
+            print("[Checkpoint] Reusing English research facts")
+        else:
+            search = ScholarlySearchAgent()
+            facts = search.run(classification, research_plan)
+            checkpoint.save("english_research", facts=facts)
         
         send_telegram(CHAT_ID, 
             f"✅ `[2/5]` English source coverage gate passed\n"
-            f"✍️ `[3/5]` Drafting the canonical English article..."
-        )
-        
-        # ─── Step 3: Write ────────────────────────────────────────────
-        writer = WriterAgent()
-        english_draft = writer.run(classification, research_plan, facts)
-        
-        send_telegram(CHAT_ID, 
-            f"✅ `[3/5]` Canonical English draft complete\n"
-            f"🛡️ `[4/5]` Fact-checking English and localizing Korean..."
+            f"🛡️ `[3/5]` Fact-checking the canonical English article..."
         )
 
-        # ─── Step 4: English fact verification and Korean localization
-        editor = EditorAgent()
-        reviewed_english, final_english = editor.run(
-            english_draft,
-            classification,
-            facts,
+        # ─── Step 3: Fact-check English or restore validated content ──
+        if (
+            checkpoint.has("english_editor")
+            and checkpoint.get("reviewed_english")
+            and checkpoint.get("final_english")
+        ):
+            reviewed_english = checkpoint.get("reviewed_english")
+            final_english = checkpoint.get("final_english")
+            print("[Checkpoint] Reusing validated English article")
+        else:
+            editor = EditorAgent()
+            reviewed_english, final_english = editor.run(
+                english_draft,
+                classification,
+                facts,
+            )
+            executed_model_stages += 1
+            checkpoint.save(
+                "english_editor",
+                reviewed_english=reviewed_english,
+                final_english=final_english,
+            )
+
+        send_telegram(CHAT_ID, 
+            f"✅ `[3/5]` Canonical English validation complete\n"
+            f"🇰🇷 `[4/5]` Localizing validated content into Korean..."
         )
-        localizer = KoreanLocalizerAgent()
-        final_korean = localizer.run(
-            reviewed_english,
-            QUERY_INPUT,
-            classification,
-            facts,
-        )
+
+        # ─── Step 4: Localize Korean or restore completed localization ─
+        if checkpoint.has("korean_localizer") and checkpoint.get("final_korean"):
+            final_korean = checkpoint.get("final_korean")
+            print("[Checkpoint] Reusing validated Korean localization")
+        else:
+            localizer = KoreanLocalizerAgent()
+            final_korean = localizer.run(
+                reviewed_english,
+                QUERY_INPUT,
+                classification,
+                facts,
+            )
+            executed_model_stages += 1
+            checkpoint.save("korean_localizer", final_korean=final_korean)
+
         final_posts = {"ko": final_korean, "en": final_english}
 
-        expected_successful_calls = 4
-        if usage_tracker.successful_calls != expected_successful_calls:
+        if executed_model_stages > STANDARD_SUCCESSFUL_CALLS:
+            raise RuntimeError(
+                "Gemini call budget exceeded: "
+                f"standard {STANDARD_SUCCESSFUL_CALLS}, executed {executed_model_stages}"
+            )
+        if usage_tracker.successful_calls != executed_model_stages:
             raise RuntimeError(
                 "Gemini call budget mismatch: "
-                f"expected {expected_successful_calls}, got {usage_tracker.successful_calls}"
+                f"expected {executed_model_stages}, got {usage_tracker.successful_calls}"
             )
         print(
-            f"[GeminiBudget] Standard pipeline completed with "
+            f"[GeminiBudget] Pipeline completed with "
             f"{usage_tracker.successful_calls} successful calls "
-            f"({usage_tracker.api_attempts} total attempts)."
+            f"({usage_tracker.api_attempts} total attempts; "
+            f"standard budget {STANDARD_SUCCESSFUL_CALLS})."
         )
 
         send_telegram(CHAT_ID, 
@@ -770,7 +838,7 @@ def main():
         
         # ─── Step 5: Save files ──────────────────────────────────────
         file_writer = FileWriterAgent()
-        created_files = file_writer.run(final_posts, classification)
+        created_files = file_writer.run(final_posts, classification, fingerprint)
         
         print("\n" + "=" * 60)
         print("✅ All agent pipeline steps complete!")

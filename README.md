@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.13.0-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.14.0-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -20,7 +20,7 @@
 | 🔍 **Local Classification** | Detects Trivia vs Engineer mode without spending a Gemini request |
 | 🌐 **Multilingual** | Korean + English posts generated simultaneously |
 | ✍️ **Multi-Agent QA** | Writer → Editor cross-review and auto-correction |
-| 📉 **4-Call Budget** | Standard KO+EN generation uses four successful Gemini calls instead of eight |
+| 📉 **3-Call Budget** | Standard KO+EN generation uses three successful Gemini calls instead of eight |
 | 🚀 **Auto Deploy** | Git Push → GitHub Pages auto-build |
 | 📩 **Quota-Aware Notify** | Telegram reports generation status, Gemini usage, and actionable quota errors |
 
@@ -35,9 +35,8 @@
         ↓
 ⚡ GitHub Actions  (workflow_dispatch)
         ↓
-🧭 Research Planner →  English intent and query resolution
+🧭 Research Writer  →  English intent, queries, and provisional draft
 🌐 SearchAgent      →  English source collection + coverage gate
-✍️  WriterAgent      →  Canonical English draft
 📝 EditorAgent      →  English fact-check + validation
 🇰🇷 KO Localizer     →  Validated English → natural Korean
 💾 FileWriterAgent  →  Jekyll Markdown file creation
@@ -63,7 +62,7 @@ blog_automation/
 │   └── wrangler.toml          # Cloudflare deployment config
 │
 ├── 📁 scripts/
-│   ├── multi_agent.py         # 5-agent / 4-call pipeline (core)
+│   ├── multi_agent.py         # English-first 5-agent / 3-call pipeline (core)
 │   ├── content_quality.py     # Local classification, references, and validation
 │   ├── gemini_runtime.py      # Gemini usage tracking, retry, and error classification
 │   ├── notify.py              # Telegram completion notification
@@ -73,7 +72,7 @@ blog_automation/
 ├── 📁 tests/
 │   ├── test_content_quality.py # Offline classification/reference/validation tests
 │   ├── test_gemini_runtime.py  # Offline quota/error/usage tests
-│   ├── test_pipeline_budget.py # Static four-call architecture guard
+│   ├── test_pipeline_budget.py # Static three-call architecture guard
 │   └── test_pipeline_integration.py # Full pipeline test with fake services
 │
 ├── 📁 _layouts/
@@ -155,16 +154,11 @@ Classifies input locally without calling Gemini:
 - **Trivia Mode**: Casual questions, general knowledge, science trivia, and history → simple analogies
 - **Engineer Mode**: Technical terms, dev/system topics → technical depth + diagrams
 
-### ResearchPlannerAgent
-Uses a short Gemini call to disambiguate multilingual input and return an English canonical topic plus 2-4 English search queries.
+### ResearchWriterAgent
+Uses one Gemini call to disambiguate multilingual input, return 2-4 English search queries, and produce a provisional English draft. External sources are collected immediately afterward and the Editor grounds the draft against them.
 
 ### SearchAgent
 Collects English facts directly from DuckDuckGo, English Wikipedia, Google Books, arXiv, and Crossref. A local coverage gate requires at least 500 fact characters and two references before long-form generation begins.
-
-### WriterAgent
-Calls Gemini API to generate the canonical English draft from the collected facts.
-- Markdown format (`##`, `>`, **bold**, `code`)
-- Auto-inserts Mermaid diagrams for technical topics
 
 ### EditorAgent
 Combines source-based fact verification and English copyediting in one call:
@@ -185,13 +179,14 @@ Localizes only the validated English article. It must preserve claims, sections,
 | Stage | Calls |
 |---|---:|
 | Local classification | 0 |
-| English research planner | 1 |
+| English research planning + provisional draft | 1 |
 | English source collection and coverage gate | 0 |
-| Canonical English draft | 1 |
 | English fact-check/edit | 1 |
 | Korean localization | 1 |
 | Local validation and file writing | 0 |
-| **Total** | **4** |
+| **Total** | **3** |
+
+Failed workflow reruns restore completed stages from `.pipeline_cache`, so only unfinished model stages are called again. Generated posts also carry a request fingerprint that blocks duplicate Telegram submissions before API use.
 
 ### FileWriterAgent
 Auto-generates Jekyll Front Matter and saves to `_posts/ko/` and `_posts/en/`.
@@ -232,7 +227,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.13.0** — Uses an English-first canonical content pipeline: research planning, English source coverage, English drafting and validation, then Korean localization within the same four-call budget.
+**v1.14.0** — Combines English research planning and provisional drafting into one call, reducing the standard pipeline to three calls while adding retry checkpoints and duplicate-request protection.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -245,7 +240,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.12.0**: Reduce the standard Gemini pipeline from 8 calls to 4 calls
 - **`[x]` v1.12.1**: Harden bilingual source collection and Editor validation
 - **`[x]` v1.13.0**: English-first canonical article and Korean localization pipeline
-- **v1.14.0**: Three-call optimization, research cache, and stage-level retry checkpoints
+- **`[x]` v1.14.0**: Three-call optimization, failed-run checkpoints, and duplicate-request protection
 - **v1.15.0**: Usage dashboard, source-quality score, Pages completion, and Telegram operations
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 

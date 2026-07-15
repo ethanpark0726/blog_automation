@@ -62,24 +62,24 @@ def article(lang: str) -> str:
 
 
 class PipelineIntegrationTests(unittest.TestCase):
-    def test_full_offline_pipeline_uses_four_successful_calls(self):
+    def test_full_offline_pipeline_uses_three_successful_calls(self):
         pipeline = load_pipeline_module()
         stages = []
 
         def fake_call(_prompt, stage, retry=3):
             del retry
             stages.append(stage)
-            if stage == "research_planner":
+            if stage == "research_writer_en":
                 response = SimpleNamespace(
                     usage_metadata=SimpleNamespace(
-                        prompt_token_count=50,
-                        candidates_token_count=25,
-                        total_token_count=75,
+                        prompt_token_count=100,
+                        candidates_token_count=200,
+                        total_token_count=300,
                     )
                 )
                 pipeline.usage_tracker.record_attempt(stage)
                 pipeline.usage_tracker.record_success(stage, response)
-                return json.dumps(
+                research = json.dumps(
                     {
                         "canonical_topic_en": "Formation of the Solar System",
                         "search_queries_en": [
@@ -89,6 +89,7 @@ class PipelineIntegrationTests(unittest.TestCase):
                         "intent_summary_en": "Explain how the Solar System formed.",
                     }
                 )
+                return article("en") + "\n\n```json_research\n" + research + "\n```"
             lang = "ko" if stage.endswith("_ko") else "en"
             response = SimpleNamespace(
                 usage_metadata=SimpleNamespace(
@@ -137,18 +138,20 @@ class PipelineIntegrationTests(unittest.TestCase):
                 )
                 ko_files = list((temp_path / "_posts" / "ko").glob("*.md"))
                 en_files = list((temp_path / "_posts" / "en").glob("*.md"))
+                ko_content = ko_files[0].read_text(encoding="utf-8")
             finally:
                 os.chdir(original_cwd)
 
         self.assertEqual(
             stages,
-            ["research_planner", "writer_en", "editor_en", "localizer_ko"],
+            ["research_writer_en", "editor_en", "localizer_ko"],
         )
         self.assertEqual(result["status"], "success")
-        self.assertEqual(result["usage"]["successful_calls"], 4)
-        self.assertEqual(result["usage"]["api_attempts"], 4)
+        self.assertEqual(result["usage"]["successful_calls"], 3)
+        self.assertEqual(result["usage"]["api_attempts"], 3)
         self.assertEqual(len(ko_files), 1)
         self.assertEqual(len(en_files), 1)
+        self.assertIn("request_fingerprint:", ko_content)
         self.assertIn(
             "formation of the solar system",
             [query.casefold() for query in search_queries],
@@ -168,6 +171,87 @@ class PipelineIntegrationTests(unittest.TestCase):
                     "search_queries_en": ["unknown niche topic"],
                 },
             )
+
+    def test_checkpoint_restores_completed_stage_data(self):
+        pipeline = load_pipeline_module()
+        original_cwd = Path.cwd()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            os.chdir(temp_dir)
+            try:
+                checkpoint = pipeline.PipelineCheckpoint("abc123")
+                checkpoint.save("english_research", facts="verified facts")
+                restored = pipeline.PipelineCheckpoint("abc123")
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertTrue(restored.has("english_research"))
+        self.assertEqual(restored.get("facts"), "verified facts")
+
+    def test_duplicate_guard_blocks_existing_fingerprint(self):
+        pipeline = load_pipeline_module()
+        fingerprint = pipeline.request_fingerprint("same question")
+        original_cwd = Path.cwd()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            post_dir = temp_path / "_posts" / "en"
+            post_dir.mkdir(parents=True)
+            (post_dir / "existing.md").write_text(
+                f'---\nrequest_fingerprint: "{fingerprint}"\n---\n',
+                encoding="utf-8",
+            )
+            os.chdir(temp_path)
+            try:
+                with self.assertRaises(pipeline.DuplicateRequestError):
+                    pipeline.ensure_request_is_new(fingerprint)
+            finally:
+                os.chdir(original_cwd)
+
+    def test_full_checkpoint_resume_uses_no_additional_model_calls(self):
+        pipeline = load_pipeline_module()
+        pipeline.send_telegram = lambda *_args, **_kwargs: None
+        pipeline.call_gemini = lambda *_args, **_kwargs: self.fail(
+            "checkpoint resume should not call Gemini"
+        )
+        fingerprint = pipeline.request_fingerprint(pipeline.QUERY_INPUT)
+        plan = {
+            "canonical_topic_en": "Formation of the Solar System",
+            "search_queries_en": ["solar system formation"],
+            "intent_summary_en": "Explain formation.",
+        }
+
+        original_cwd = Path.cwd()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            os.chdir(temp_path)
+            try:
+                checkpoint = pipeline.PipelineCheckpoint(fingerprint)
+                checkpoint.save(
+                    "research_writer",
+                    research_plan=plan,
+                    english_draft=article("en"),
+                )
+                checkpoint.save("english_research", facts="restored verified facts")
+                checkpoint.save(
+                    "english_editor",
+                    reviewed_english=article("en"),
+                    final_english=article("en"),
+                )
+                checkpoint.save("korean_localizer", final_korean=article("ko"))
+
+                with patch.dict(
+                    os.environ,
+                    {"GITHUB_ENV": str(temp_path / "github_env"), "GITHUB_ACTIONS": "true"},
+                ), patch("builtins.print"):
+                    pipeline.main()
+
+                result = json.loads(
+                    (temp_path / ".pipeline_result.json").read_text(encoding="utf-8")
+                )
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["usage"]["successful_calls"], 0)
 
 
 if __name__ == "__main__":

@@ -43,6 +43,14 @@ jobs:
         run: |
           python -m unittest discover -s tests -v
 
+      - name: ♻️ Restore Failed-Run Checkpoint
+        uses: actions/cache/restore@v4
+        with:
+          path: .pipeline_cache
+          key: pipeline-checkpoint-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            pipeline-checkpoint-${{ github.run_id }}-
+
       # ── 4. Run Multi-Agent ──────────────────────────────────
       - name: ✍️ Run Multi-Agent (Writer + Editor)
         env:
@@ -75,6 +83,18 @@ jobs:
       - name: 🚀 Push to GitHub
         run: |
           git push origin main
+
+      - name: 🧹 Clear Successful Checkpoint
+        if: success()
+        run: |
+          python -c "import shutil; shutil.rmtree('.pipeline_cache', ignore_errors=True)"
+
+      - name: 💾 Save Failed-Run Checkpoint
+        if: failure()
+        uses: actions/cache/save@v4
+        with:
+          path: .pipeline_cache
+          key: pipeline-checkpoint-${{ github.run_id }}-${{ github.run_attempt }}
 
       # ── 8. Telegram Completion Notification ─────────────────
       - name: 📩 Send Telegram Completion Notification

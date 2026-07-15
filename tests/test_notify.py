@@ -27,6 +27,19 @@ class NotifyTests(unittest.TestCase):
         self.assertIn("450-word safety floor", message)
         self.assertIn("상세 사유", message)
 
+    def test_duplicate_request_message_is_explicit(self):
+        message = notify.api_failure_message(
+            {
+                "category": "duplicate_request",
+                "stage": "duplicate_guard",
+                "message": "This Telegram request was already published",
+            },
+            "https://github.com/example/repo/actions",
+        )
+
+        self.assertIn("이미 게시된 요청", message)
+        self.assertIn("duplicate_guard", message)
+
 
 if __name__ == "__main__":
     unittest.main()
