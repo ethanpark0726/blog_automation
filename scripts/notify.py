@@ -13,6 +13,7 @@ JOB_STATUS = os.environ.get("JOB_STATUS", "unknown")
 QUERY_INPUT = os.environ.get("QUERY_INPUT", "")
 GITHUB_REPOSITORY = os.environ.get("GITHUB_REPOSITORY", "")
 PIPELINE_RESULT_PATH = Path(os.environ.get("PIPELINE_RESULT_PATH", ".pipeline_result.json"))
+PAGES_RESULT_PATH = Path(os.environ.get("PAGES_RESULT_PATH", ".pages_result.json"))
 
 
 def send_message(chat_id: str, text: str) -> None:
@@ -50,7 +51,15 @@ def load_pipeline_result() -> dict:
     return {}
 
 
-def usage_summary(result: dict) -> str:
+def load_pages_result() -> dict:
+    try:
+        return json.loads(PAGES_RESULT_PATH.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return {}
+
+
+def operations_usage_summary(result: dict) -> str:
+    """Summarize real per-run usage; Gemini does not expose remaining free quota."""
     usage = result.get("usage") or {}
     attempts = usage.get("api_attempts", 0)
     successful = usage.get("successful_calls", 0)
@@ -59,12 +68,72 @@ def usage_summary(result: dict) -> str:
     total_tokens = usage.get("total_tokens", 0)
     if not any((attempts, successful, prompt_tokens, output_tokens, total_tokens)):
         return ""
+
+    stage_labels = {
+        "research_writer_en": "영문 기획·초안",
+        "editor_en": "영문 검증·편집",
+        "localizer_ko": "한글 현지화",
+    }
+    stage_lines = []
+    for stage, stage_usage in (usage.get("by_stage") or {}).items():
+        label = stage_labels.get(stage, stage)
+        stage_lines.append(
+            f"• {label}: `{stage_usage.get('total_tokens', 0):,}` 토큰"
+        )
+    stage_text = "\n" + "\n".join(stage_lines) if stage_lines else ""
     return (
         "\n\n📊 *Gemini 사용량 (이번 실행)*\n"
         f"• API 시도: `{attempts}`회 / 성공: `{successful}`회\n"
-        f"• 입력 토큰: `{prompt_tokens:,}`\n"
-        f"• 출력 토큰: `{output_tokens:,}`\n"
-        f"• 총 토큰: `{total_tokens:,}`"
+        f"• 입력: `{prompt_tokens:,}` / 출력: `{output_tokens:,}`\n"
+        f"• 총 토큰: `{total_tokens:,}`{stage_text}\n"
+        "_Gemini API는 무료 한도의 정확한 잔여량을 제공하지 않습니다._"
+    )
+
+
+def source_quality_summary(result: dict) -> str:
+    source = (result.get("metrics") or {}).get("source_quality") or {}
+    if not source:
+        return ""
+    grades = {
+        "excellent": "매우 우수",
+        "good": "우수",
+        "fair": "보통",
+        "weak": "주의 필요",
+    }
+    grade = grades.get(source.get("grade"), source.get("grade", "unknown"))
+    return (
+        "\n\n🔎 *참고자료 품질*\n"
+        f"• 점수: `{source.get('score', 0)}/100` ({grade})\n"
+        f"• 출처: `{source.get('reference_count', 0)}`개 / "
+        f"도메인: `{source.get('domain_count', 0)}`개"
+    )
+
+
+def build_success_message(result: dict, pages: dict, pages_url: str, logs_url: str) -> str:
+    pages_status = pages.get("status")
+    pages_run_url = pages.get("run_url") or logs_url
+    if pages_status == "success":
+        deployment = "✅ GitHub Pages 배포 완료"
+        link = f"🔗 [블로그 바로가기]({pages_url})"
+    elif pages_status == "failed":
+        deployment = "⚠️ 글 저장 완료 / GitHub Pages 배포 실패"
+        link = f"🔍 [Pages 실행 로그]({pages_run_url})"
+    elif pages_status == "timeout":
+        deployment = "⏳ 글 저장 완료 / GitHub Pages 배포 확인 시간 초과"
+        link = f"🔍 [Pages 실행 상태]({pages_run_url})"
+    else:
+        deployment = "⚠️ 글 저장 완료 / GitHub Pages 상태 확인 불가"
+        link = f"🔍 [GitHub Actions 상태]({logs_url})"
+
+    return (
+        "🎉 *블로그 생성 작업 완료*\n\n"
+        f"📝 주제: `{QUERY_INPUT}`\n\n"
+        "✅ 영문 참고자료 조사 및 사실 검증 완료\n"
+        "✅ 검증된 영문 콘텐츠의 한국어 현지화 완료\n"
+        f"{deployment}\n\n"
+        f"{link}"
+        f"{source_quality_summary(result)}"
+        f"{operations_usage_summary(result)}"
     )
 
 
@@ -143,33 +212,26 @@ def main():
     pages_url = f"https://{owner}.github.io/{repo}/" if owner else ""
     logs_url = f"https://github.com/{GITHUB_REPOSITORY}/actions"
     result = load_pipeline_result()
-    usage = usage_summary(result)
-    
+    pages = load_pages_result()
+    usage = operations_usage_summary(result)
+
     if JOB_STATUS == "success":
+        send_message(CHAT_ID, build_success_message(result, pages, pages_url, logs_url))
+        return
+
+    error = result.get("error") or {}
+    if error.get("category") == "quota_exhausted":
+        message = quota_failure_message(error, logs_url) + usage
+    elif error:
+        message = api_failure_message(error, logs_url) + usage
+    else:
         message = (
-            f"🎉 *Blog Generation Complete!*\n\n"
-            f"📝 Topic: `{QUERY_INPUT}`\n\n"
-            f"✅ English research coverage and fact-check complete\n"
-            f"✅ Validated English article localized into Korean\n"
-            f"✅ Saved to GitHub; Pages deployment has started\n\n"
-            f"🔗 View Blog: [{pages_url}]({pages_url})\n\n"
-            f"_New posts will be visible in 1-2 minutes after the GitHub Pages build completes._"
+            f"❌ *Blog Automation Failed*\n\n"
+            f"📝 Topic: `{QUERY_INPUT}`\n"
+            f"⚠️ Status: `{JOB_STATUS}`\n\n"
+            f"🔍 [GitHub Actions 로그 확인]({logs_url})"
             f"{usage}"
         )
-    else:
-        error = result.get("error") or {}
-        if error.get("category") == "quota_exhausted":
-            message = quota_failure_message(error, logs_url) + usage
-        elif error:
-            message = api_failure_message(error, logs_url) + usage
-        else:
-            message = (
-                f"❌ *Blog Automation Failed*\n\n"
-                f"📝 Topic: `{QUERY_INPUT}`\n"
-                f"⚠️ Status: `{JOB_STATUS}`\n\n"
-                f"🔍 [GitHub Actions 로그 확인]({logs_url})"
-                f"{usage}"
-            )
     
     send_message(CHAT_ID, message)
 

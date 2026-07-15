@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
 
     steps:
       # ── 1. Repository Checkout ────────────────────────────────
@@ -78,11 +79,20 @@ jobs:
             COMMIT_MSG="feat: add post from Telegram (ko/en) - $(date +'%Y-%m-%d %H:%M:%S')"
             git commit -m "$COMMIT_MSG"
           fi
+          echo "PAGES_COMMIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       # ── 7. Push to Remote Repository ─────────────────────────
       - name: 🚀 Push to GitHub
         run: |
           git push origin main
+
+      - name: Wait for GitHub Pages Deployment
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PAGES_COMMIT_SHA: ${{ env.PAGES_COMMIT_SHA }}
+        run: |
+          python scripts/pages_status.py
 
       - name: 🧹 Clear Successful Checkpoint
         if: success()
@@ -107,3 +117,8 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           python scripts/notify.py
+
+      - name: Publish Operations Summary
+        if: always()
+        run: |
+          python scripts/operations_summary.py

@@ -14,6 +14,7 @@ from content_quality import (  # noqa: E402
     extract_references,
     is_usable_search_result,
     normalize_metadata_block,
+    source_quality_score,
     validate_post,
 )
 
@@ -67,6 +68,24 @@ Link: https://en.wikipedia.org/wiki/Kubernetes
         self.assertEqual(len(references), 2)
         self.assertEqual(references[0]["title"], "Kubernetes")
         self.assertEqual(references[1]["url"], "https://arxiv.org/abs/1234.5678")
+
+    def test_source_quality_score_rewards_independent_authoritative_sources(self):
+        facts = """
+[Wikipedia] Title: Kubernetes
+Snippet: Container orchestration background.
+Link: https://en.wikipedia.org/wiki/Kubernetes
+
+[Academic Paper] Title: Cluster Management
+Abstract: Independent academic evidence.
+Link: https://arxiv.org/abs/1234.5678
+""" + ("evidence " * 80)
+
+        quality = source_quality_score(facts)
+
+        self.assertGreaterEqual(quality["score"], 75)
+        self.assertEqual(quality["grade"], "good")
+        self.assertEqual(quality["reference_count"], 2)
+        self.assertEqual(quality["domain_count"], 2)
 
     def test_appends_references_before_metadata(self):
         content = """## Intro

@@ -6,6 +6,20 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.15.0] — 2026-07-14
+
+### Added
+- **Source Quality Score**: Calculates a deterministic `0-100` score from verified reference count, domain diversity, evidence volume, and authoritative domains without another Gemini call.
+- **Operations Dashboard**: Publishes pipeline status, source quality, total usage, and per-stage token consumption to the GitHub Actions job summary.
+- **Pages Completion Monitor**: Waits for the `deploy.yml` run associated with the generated post commit and records success, failure, timeout, or monitor errors.
+- **Telegram Operations Commands**: `/status` reports recent generation and Pages workflow states, while `/help` documents the bot commands.
+
+### Changed
+- **Verified Completion Notification**: Telegram now reports the actual GitHub Pages deployment result instead of only reporting that deployment started.
+- **Transparent Quota Reporting**: Completion messages show measured per-run and per-stage Gemini consumption and explicitly avoid estimating an exact remaining free-tier quota that the API does not expose.
+
+---
+
 ## [1.14.0] — 2026-07-14
 
 ### Added

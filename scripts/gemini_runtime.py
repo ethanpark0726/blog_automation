@@ -345,6 +345,7 @@ def write_pipeline_result(
     *,
     error: Exception | None = None,
     created_files: list[str] | None = None,
+    metrics: dict[str, Any] | None = None,
     path: Path = RESULT_PATH,
 ) -> None:
     error_payload: dict[str, Any] | None = None
@@ -366,6 +367,7 @@ def write_pipeline_result(
         "status": status,
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "usage": tracker.snapshot(),
+        "metrics": metrics or {},
         "created_files": created_files or [],
         "error": error_payload,
     }

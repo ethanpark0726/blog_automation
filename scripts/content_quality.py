@@ -6,6 +6,7 @@ import json
 import re
 from dataclasses import dataclass, field
 from typing import Iterable
+from urllib.parse import urlparse
 
 
 ENGINEER_TERMS = (
@@ -269,6 +270,58 @@ def extract_references(facts: str, limit: int = 12) -> list[dict[str, str]]:
             break
 
     return references
+
+
+def source_quality_score(facts: str) -> dict[str, object]:
+    """Return a deterministic source-quality score without another model call."""
+    references = extract_references(facts)
+    domains = {
+        urlparse(reference["url"]).netloc.lower().removeprefix("www.")
+        for reference in references
+        if reference.get("url")
+    }
+    authority_domains = (
+        "arxiv.org",
+        "crossref.org",
+        "doi.org",
+        "ietf.org",
+        "rfc-editor.org",
+        "wikipedia.org",
+        "books.google.",
+    )
+    authoritative = sum(
+        1
+        for domain in domains
+        if any(marker in domain for marker in authority_domains)
+    )
+
+    # Meeting the publication floor starts near 70. Additional independent
+    # references and evidence volume raise confidence, capped at 100.
+    reference_points = min(40, 20 + max(0, len(references) - 1) * 10)
+    domain_points = min(25, len(domains) * 10)
+    evidence_points = min(25, 15 + len(facts) // 500)
+    authority_points = min(10, authoritative * 5)
+    score = min(
+        100,
+        reference_points + domain_points + evidence_points + authority_points,
+    )
+    if score >= 90:
+        grade = "excellent"
+    elif score >= 75:
+        grade = "good"
+    elif score >= 60:
+        grade = "fair"
+    else:
+        grade = "weak"
+
+    return {
+        "score": score,
+        "grade": grade,
+        "reference_count": len(references),
+        "domain_count": len(domains),
+        "authoritative_domain_count": authoritative,
+        "fact_characters": len(facts),
+    }
 
 
 def normalize_metadata_block(content: str) -> str:

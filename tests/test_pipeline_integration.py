@@ -149,6 +149,10 @@ class PipelineIntegrationTests(unittest.TestCase):
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["usage"]["successful_calls"], 3)
         self.assertEqual(result["usage"]["api_attempts"], 3)
+        self.assertGreaterEqual(
+            result["metrics"]["source_quality"]["score"],
+            75,
+        )
         self.assertEqual(len(ko_files), 1)
         self.assertEqual(len(en_files), 1)
         self.assertIn("request_fingerprint:", ko_content)

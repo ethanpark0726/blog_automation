@@ -32,6 +32,7 @@ from content_quality import (
     classify_query,
     extract_references,
     is_usable_search_result,
+    source_quality_score,
     validate_post,
 )
 from gemini_runtime import (
@@ -763,6 +764,14 @@ def main():
             search = ScholarlySearchAgent()
             facts = search.run(classification, research_plan)
             checkpoint.save("english_research", facts=facts)
+
+        source_quality = source_quality_score(facts)
+        print(
+            "[SourceQuality] "
+            f"{source_quality['score']}/100 ({source_quality['grade']}), "
+            f"{source_quality['reference_count']} references across "
+            f"{source_quality['domain_count']} domains"
+        )
         
         send_telegram(CHAT_ID, 
             f"✅ `[2/5]` English source coverage gate passed\n"
@@ -855,6 +864,7 @@ def main():
             "success",
             usage_tracker,
             created_files=created_files,
+            metrics={"source_quality": source_quality},
         )
         
     except Exception as e:

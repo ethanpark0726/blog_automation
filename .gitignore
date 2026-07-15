@@ -38,4 +38,5 @@ Thumbs.db
 
 # Local pipeline runtime state
 .pipeline_result.json
+.pages_result.json
 .pipeline_cache/

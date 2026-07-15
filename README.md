@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.14.0-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.15.0-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -23,6 +23,7 @@
 | 📉 **3-Call Budget** | Standard KO+EN generation uses three successful Gemini calls instead of eight |
 | 🚀 **Auto Deploy** | Git Push → GitHub Pages auto-build |
 | 📩 **Quota-Aware Notify** | Telegram reports generation status, Gemini usage, and actionable quota errors |
+| 📡 **Operations Telemetry** | Actions summary and Telegram report per-stage tokens, source quality, and the actual Pages result |
 
 ---
 
@@ -43,7 +44,7 @@
         ↓
 🇰🇷 _posts/ko/   +   🇺🇸 _posts/en/
         ↓
-🚀 Git Push → 🌐 GitHub Pages → 📩 Done notification
+🚀 Git Push → 🌐 Wait for GitHub Pages completion → 📩 Verified notification
 ```
 
 ---
@@ -66,12 +67,15 @@ blog_automation/
 │   ├── content_quality.py     # Local classification, references, and validation
 │   ├── gemini_runtime.py      # Gemini usage tracking, retry, and error classification
 │   ├── notify.py              # Telegram completion notification
+│   ├── pages_status.py        # Waits for the exact post commit's Pages deployment
+│   ├── operations_summary.py  # GitHub Actions usage and quality dashboard
 │   ├── fix_mermaid.py         # Mermaid node label auto-fix utility
 │   └── requirements.txt       # Python dependencies
 │
 ├── 📁 tests/
 │   ├── test_content_quality.py # Offline classification/reference/validation tests
 │   ├── test_gemini_runtime.py  # Offline quota/error/usage tests
+│   ├── test_operations.py      # Pages monitoring and dashboard tests
 │   ├── test_pipeline_budget.py # Static three-call architecture guard
 │   └── test_pipeline_integration.py # Full pipeline test with fake services
 │
@@ -198,7 +202,15 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 - Daily quota exhaustion stops immediately instead of spending retries that cannot succeed before reset.
 - Only transient rate limits, timeouts, and service errors are retried with bounded exponential backoff.
 - `.pipeline_result.json` carries structured usage and failure details to the final Telegram notification step.
-- Successful notifications report per-run API attempts and input/output token usage. Project-wide remaining quota requires the planned Cloud Monitoring integration.
+- Successful notifications report per-run API attempts, per-stage tokens, and input/output totals.
+- Gemini's generate-content response does not expose the exact remaining free-tier request count, so the bot reports measured consumption without inventing a remaining-quota estimate.
+
+### Operations, Source Quality, and Pages Completion
+
+- Source quality is scored locally from `0-100` using reference count, independent-domain diversity, evidence volume, and authoritative domains. This costs no Gemini request.
+- Every run publishes a GitHub Actions job summary with pipeline status, Pages status, total tokens, per-stage token usage, and source quality.
+- The generation workflow waits for the `deploy.yml` run associated with the exact generated-post commit. Telegram therefore distinguishes Pages success, failure, timeout, and monitor errors.
+- Telegram `/status` reports the latest generation and Pages workflow states; `/help` lists supported commands. Deploy `cloudflare-worker/worker.js` again for these command changes to become active.
 
 ---
 
@@ -227,7 +239,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.14.0** — Combines English research planning and provisional drafting into one call, reducing the standard pipeline to three calls while adding retry checkpoints and duplicate-request protection.
+**v1.15.0** — Adds source-quality scoring, per-stage usage dashboards, verified Pages completion, and Telegram operations commands without adding Gemini calls.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -241,7 +253,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.12.1**: Harden bilingual source collection and Editor validation
 - **`[x]` v1.13.0**: English-first canonical article and Korean localization pipeline
 - **`[x]` v1.14.0**: Three-call optimization, failed-run checkpoints, and duplicate-request protection
-- **v1.15.0**: Usage dashboard, source-quality score, Pages completion, and Telegram operations
+- **`[x]` v1.15.0**: Usage dashboard, source-quality score, Pages completion, and Telegram operations
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 
 ---
