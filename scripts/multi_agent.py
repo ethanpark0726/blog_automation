@@ -615,12 +615,15 @@ class FileWriterAgent:
         category = "Trivia" if mode == "trivia" else "Engineer"
         keywords = classification.get("keywords", [])
         
-        # Generate a shared topic_id for KO/EN post pairing
+        # Generate a shared topic_id and post_id for KO/EN post pairing
         topic_en = classification.get("topic_en", "post")
         topic_id = re.sub(r"[^\w\s-]", "", topic_en.lower())
         topic_id = re.sub(r"[\s_]+", "-", topic_id).strip("-")[:40]
         if not topic_id:
             topic_id = f"topic-{date_str}"
+            
+        post_id_hash = hashlib.sha256((topic_id + date_str).encode('utf-8')).hexdigest()[:8]
+        post_id = f"{topic_id}-{post_id_hash}"
         
         created_files = []
         
@@ -650,6 +653,7 @@ tags:
 {tags_yaml}
 lang: {lang}
 topic_id: "{topic_id}"
+post_id: "{post_id}"
 request_fingerprint: "{fingerprint}"
 description: "{self._escape_yaml(description)}"
 ---
