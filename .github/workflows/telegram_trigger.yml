@@ -84,7 +84,7 @@ jobs:
       # ── 7. Push to Remote Repository ─────────────────────────
       - name: 🚀 Push to GitHub
         run: |
-          git push origin main
+          git push origin HEAD
 
       - name: Wait for GitHub Pages Deployment
         if: success()
