@@ -6,6 +6,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.16.0] — 2026-07-16
+
+### Added
+- **Obsidian Integration Foundation**: Set up directories (`_knowledge`, `_ideas`, `_reviews`, `_templates`) and basic `.gitignore` / `_config.yml` rules for using the repository as an Obsidian Vault (Phase 1).
+- **Safe Editing Rules**: Added strict AI file editing instructions to `CONTRIBUTING.md` to prevent accidental code deletion.
+
+---
+
 ## [1.15.1] — 2026-07-15
 
 ### Fixed
