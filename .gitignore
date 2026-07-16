@@ -40,3 +40,6 @@ Thumbs.db
 .pipeline_result.json
 .pages_result.json
 .pipeline_cache/
+
+# Obsidian
+.obsidian/

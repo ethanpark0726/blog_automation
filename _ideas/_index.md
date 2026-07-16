@@ -1,0 +1,3 @@
+# _ideas
+
+Obsidian notes.

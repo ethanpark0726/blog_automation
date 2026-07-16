@@ -58,3 +58,11 @@ exclude:
   - Gemfile.lock
   - node_modules/
   - vendor/
+  - _knowledge/
+  - _ideas/
+  - _reviews/
+  - _inbox/
+  - _templates/
+  - OBSIDIAN_IMPLEMENTATION_PLAN.md
+  - OBSIDIAN_INTEGRATION_CHECKLIST.md
+  - tistory_sync_plan.md
