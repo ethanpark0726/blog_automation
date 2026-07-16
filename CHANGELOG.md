@@ -6,6 +6,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.15.1] — 2026-07-15
+
+### Fixed
+- **Docs Rule False Positive on Korean Post Paths**: `check_docs.yml` now disables Git path quoting before analyzing changed files, so `_posts/ko/...` updates with non-ASCII filenames are correctly treated as post-only changes.
+- **Line Ending Drift in Local Editors**: Added a repository-level `.gitattributes` so Markdown, workflow, script, and stylesheet files stay on LF and are less likely to show noisy status changes after opening them in Obsidian or Windows editors.
+
+---
+
 ## [1.15.0] — 2026-07-14
 
 ### Added

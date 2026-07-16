@@ -23,6 +23,7 @@ jobs:
       - name: 🔍 Detect Changed Files
         id: changes
         run: |
+          git config core.quotePath false
           echo "=== Changed File List ==="
           git diff --name-only HEAD~1 HEAD || git diff --name-only HEAD
 
@@ -47,6 +48,7 @@ jobs:
 
       - name: ✅ Enforce Docs Update Rule
         run: |
+          git config core.quotePath false
           CHANGED="${{ steps.changes.outputs.non_post_changes }}"
           README_CHANGED="${{ steps.changes.outputs.readme_changed }}"
           CHANGELOG_CHANGED="${{ steps.changes.outputs.changelog_changed }}"
