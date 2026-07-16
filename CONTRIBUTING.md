@@ -88,3 +88,13 @@ Before committing and pushing any code changes, always perform these validation 
    - Check if all code replacement chunks applied completely and cleanly without warnings.
 3. **Markdown Conformity**:
    - Make sure all newly added Jekyll front matter variables and page formatting guidelines are followed.
+
+---
+
+## 🚫 Safe File Editing Rules (CRITICAL)
+
+To prevent accidental data loss or code corruption during AI modifications:
+1. **Never guess the content**: Always view the file or `grep` the exact lines before attempting a replacement.
+2. **Minimal scoping**: Match the smallest, most unique block of text possible. Do NOT match entire large classes or functions if you only need to change one line.
+3. **Verify post-edit**: Immediately run `git diff` after making a file modification to ensure no extraneous code was duplicated or deleted.
+4. **Use `multi_replace_file_content`** when making changes in multiple separate places in the same file to prevent overlapping context issues.
