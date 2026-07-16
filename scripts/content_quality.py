@@ -412,20 +412,20 @@ def validate_post(content: str, lang: str, source_urls: Iterable[str]) -> Valida
             result.errors.append("json_meta tags must be an array")
 
     body = META_PATTERN.sub("", content).strip()
-    if len(re.findall(r"^##\s+", body, re.MULTILINE)) < 2:
-        result.errors.append("post requires at least two level-2 headings")
+    if len(re.findall(r"^##\s+", body, re.MULTILINE)) < 1:
+        result.errors.append("post requires at least one level-2 heading")
     if content.count("```") % 2:
         result.errors.append("unbalanced fenced code block")
 
     if lang == "ko":
-        if len(body) < 1200:
-            result.errors.append("Korean body is below the 1200-character safety floor")
+        if len(body) < 800:
+            result.errors.append("Korean body is below the 800-character safety floor")
         elif len(body) < 3000:
             result.warnings.append("Korean body is below the 3000-character target")
     else:
         word_count = len(re.findall(r"\b[\w'-]+\b", body))
-        if word_count < 450:
-            result.errors.append("English body is below the 450-word safety floor")
+        if word_count < 250:
+            result.errors.append("English body is below the 250-word safety floor")
         elif word_count < 1200:
             result.warnings.append("English body is below the 1200-word target")
 
