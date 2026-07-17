@@ -341,6 +341,30 @@ def normalize_metadata_block(content: str) -> str:
     return content
 
 
+def append_missing_metadata_block(
+    content: str,
+    title: str,
+    description: str,
+    tags: Iterable[str],
+) -> str:
+    """Append a deterministic json_meta block when the model omits it."""
+    content = normalize_metadata_block(content).strip()
+    if META_PATTERN.search(content):
+        return content
+
+    clean_tags = [str(tag).strip() for tag in tags if str(tag).strip()]
+    if not clean_tags:
+        clean_tags = ["blog"]
+
+    metadata = {
+        "title": title.strip() or "Untitled",
+        "description": description.strip() or "Generated blog post.",
+        "tags": clean_tags,
+    }
+    meta_json = json.dumps(metadata, ensure_ascii=False)
+    return f"{content}\n\n```json_meta\n{meta_json}\n```"
+
+
 def append_references(content: str, lang: str, references: Iterable[dict[str, str]]) -> str:
     """Append deterministic references immediately before the json_meta block."""
     content = normalize_metadata_block(content)

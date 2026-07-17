@@ -27,6 +27,7 @@ import google.generativeai as genai
 
 from content_quality import (
     ContentValidationError,
+    append_missing_metadata_block,
     append_references,
     build_search_queries,
     classify_query,
@@ -586,6 +587,12 @@ Rules:
 Output only the complete Korean article and its final `json_meta` block.
 """
         localized = call_gemini(prompt, stage="localizer_ko")
+        localized = append_missing_metadata_block(
+            localized,
+            title=classification.get("topic_ko", original_query),
+            description=f"{classification.get('topic_ko', original_query)}에 대한 한국어 블로그 글입니다.",
+            tags=classification.get("keywords", []),
+        )
         references = extract_references(facts)
         final = append_references(localized, "ko", references)
         validation = validate_post(

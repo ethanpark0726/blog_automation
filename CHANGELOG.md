@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.16.1] — 2026-07-16
+
+### Fixed
+- **Korean Localizer Metadata Recovery**: Added a deterministic local fallback that appends a valid `json_meta` block when Gemini returns a translated Korean article without metadata, preventing `missing json_meta block` validation failures without spending another API call.
+
+### Added
+- **Regression Coverage**: Added tests for metadata fallback and Korean localizer recovery.
+- **Gemini SDK Migration Plan**: Documented the move from deprecated `google.generativeai` to `google.genai` as a required stabilization step before Phase 3.
+
+---
+
 ## [1.16.0] — 2026-07-16
 
 ### Added
