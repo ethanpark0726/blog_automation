@@ -27,6 +27,7 @@ import google.generativeai as genai
 
 from content_quality import (
     ContentValidationError,
+    append_missing_metadata_block,
     append_references,
     build_search_queries,
     classify_query,
@@ -388,7 +389,12 @@ Output only the complete English article followed by the `json_research` block.
 
         draft = cls.RESEARCH_PATTERN.sub("", raw).strip()
         if "```json_meta" not in draft:
-            raise ResearchPlanError("Research writer draft is missing json_meta")
+            draft = append_missing_metadata_block(
+                draft,
+                title=topic,
+                description=str(payload.get("intent_summary_en") or f"An article about {topic}."),
+                tags=queries[:3],
+            )
         plan = {
             "canonical_topic_en": topic[:160],
             "search_queries_en": queries[:4],
@@ -586,6 +592,12 @@ Rules:
 Output only the complete Korean article and its final `json_meta` block.
 """
         localized = call_gemini(prompt, stage="localizer_ko")
+        localized = append_missing_metadata_block(
+            localized,
+            title=classification.get("topic_ko", original_query),
+            description=f"{classification.get('topic_ko', original_query)}에 대한 한국어 블로그 글입니다.",
+            tags=classification.get("keywords", []),
+        )
         references = extract_references(facts)
         final = append_references(localized, "ko", references)
         validation = validate_post(
@@ -615,12 +627,15 @@ class FileWriterAgent:
         category = "Trivia" if mode == "trivia" else "Engineer"
         keywords = classification.get("keywords", [])
         
-        # Generate a shared topic_id for KO/EN post pairing
+        # Generate a shared topic_id and post_id for KO/EN post pairing
         topic_en = classification.get("topic_en", "post")
         topic_id = re.sub(r"[^\w\s-]", "", topic_en.lower())
         topic_id = re.sub(r"[\s_]+", "-", topic_id).strip("-")[:40]
         if not topic_id:
             topic_id = f"topic-{date_str}"
+            
+        post_id_hash = hashlib.sha256((topic_id + date_str).encode('utf-8')).hexdigest()[:8]
+        post_id = f"{topic_id}-{post_id_hash}"
         
         created_files = []
         
@@ -650,6 +665,7 @@ tags:
 {tags_yaml}
 lang: {lang}
 topic_id: "{topic_id}"
+post_id: "{post_id}"
 request_fingerprint: "{fingerprint}"
 description: "{self._escape_yaml(description)}"
 ---

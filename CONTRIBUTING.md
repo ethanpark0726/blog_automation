@@ -7,6 +7,13 @@
 
 ---
 
+## 🌿 Required Rule: Branch and Pull Request Workflow
+
+> **New features and fixes MUST be developed in a separate feature branch.**  
+> Never commit directly to the `main` branch. After testing is complete and validated, create a Pull Request (PR) and merge it into `main`.
+
+---
+
 ## Versioning (Semantic Versioning)
 
 ```

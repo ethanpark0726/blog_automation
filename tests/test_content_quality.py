@@ -8,6 +8,7 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 
 from content_quality import (  # noqa: E402
     ContentValidationError,
+    append_missing_metadata_block,
     append_references,
     build_search_queries,
     classify_query,
@@ -120,6 +121,20 @@ Text
 
         self.assertIn("```json_meta", normalized)
         self.assertNotIn("```json\n", normalized)
+
+    def test_appends_missing_metadata_block_without_model_call(self):
+        content = "## Intro\n\nText\n\n## Details\n\nMore text"
+
+        normalized = append_missing_metadata_block(
+            content,
+            title="Korean Title",
+            description="Korean description.",
+            tags=["one", "two"],
+        )
+
+        self.assertIn("```json_meta", normalized)
+        self.assertIn('"title": "Korean Title"', normalized)
+        self.assertIn('"tags": ["one", "two"]', normalized)
 
     def test_validation_rejects_missing_metadata(self):
         result = validate_post("## One\ntext\n## Two\ntext", "en", [])

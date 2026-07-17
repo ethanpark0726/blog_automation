@@ -6,11 +6,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.16.2] — 2026-07-17
+
+### Fixed
+- **Feature Branch Pages Wait**: `telegram_trigger.yml` now waits for GitHub Pages deployment only on `main`. Feature-branch runs write a skipped Pages result instead of polling for a `deploy.yml` run that cannot exist because Pages auto-deploy is configured for `main` pushes only.
+
+---
+
+## [1.16.1] — 2026-07-16
+
+### Fixed
+- **Model Metadata Recovery**: Added deterministic local fallbacks that append a valid `json_meta` block when Gemini returns either the provisional English draft or the translated Korean article without metadata, preventing `missing json_meta block` validation failures without spending another API call.
+
+### Added
+- **Regression Coverage**: Added tests for metadata fallback, Research Writer recovery, and Korean Localizer recovery.
+- **Gemini SDK Migration Plan**: Documented the move from deprecated `google.generativeai` to `google.genai` as a required stabilization step before Phase 3.
+
+---
+
 ## [1.16.0] — 2026-07-16
 
 ### Added
 - **Obsidian Integration Foundation**: Set up directories (`_knowledge`, `_ideas`, `_reviews`, `_templates`) and basic `.gitignore` / `_config.yml` rules for using the repository as an Obsidian Vault (Phase 1).
 - **Safe Editing Rules**: Added strict AI file editing instructions to `CONTRIBUTING.md` to prevent accidental code deletion.
+- **Branch/PR Workflow Rule**: Enforced a new rule in `CONTRIBUTING.md` requiring all features/fixes to be developed on feature branches and merged via Pull Request.
 
 ---
 

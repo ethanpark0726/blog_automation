@@ -257,6 +257,62 @@ class PipelineIntegrationTests(unittest.TestCase):
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["usage"]["successful_calls"], 0)
 
+    def test_korean_localizer_recovers_missing_metadata_block(self):
+        pipeline = load_pipeline_module()
+        body = "## Intro\n\n" + ("Localized Korean article body. " * 80)
+        body += "\n\n## Details\n\n" + ("More localized Korean article body. " * 80)
+        facts = """
+[Wikipedia] Title: MCP
+Snippet: Example source.
+Link: https://en.wikipedia.org/wiki/MCP
+"""
+
+        pipeline.call_gemini = lambda *_args, **_kwargs: body
+        localized = pipeline.KoreanLocalizerAgent().run(
+            reviewed_english=article("en"),
+            original_query="MCP란 무엇인가?",
+            classification={
+                "mode": "trivia",
+                "topic_ko": "MCP란 무엇인가?",
+                "keywords": ["MCP", "운영체제"],
+            },
+            facts=facts,
+        )
+
+        self.assertIn("```json_meta", localized)
+        self.assertIn('"title": "MCP란 무엇인가?"', localized)
+        self.assertIn("https://en.wikipedia.org/wiki/MCP", localized)
+
+    def test_research_writer_recovers_missing_draft_metadata_block(self):
+        pipeline = load_pipeline_module()
+        raw = """## Introduction
+
+This draft explains hands-on detection in driver assistance systems.
+
+## Sensor Comparison
+
+Capacitive sensing and torque sensing measure different signals.
+
+```json_research
+{
+  "canonical_topic_en": "Capacitive vs torque steering-wheel hands-on detection",
+  "search_queries_en": [
+    "capacitive steering wheel hands on detection",
+    "torque sensor hands on detection driver assistance"
+  ],
+  "intent_summary_en": "Explain the difference between capacitive and torque sensors for steering-wheel hands-on detection."
+}
+```"""
+
+        plan, draft = pipeline.ResearchWriterAgent._parse_output(raw)
+
+        self.assertEqual(
+            plan["canonical_topic_en"],
+            "Capacitive vs torque steering-wheel hands-on detection",
+        )
+        self.assertIn("```json_meta", draft)
+        self.assertIn('"title": "Capacitive vs torque steering-wheel hands-on detection"', draft)
+
 
 if __name__ == "__main__":
     unittest.main()

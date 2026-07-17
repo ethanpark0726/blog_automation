@@ -84,15 +84,23 @@ jobs:
       # ── 7. Push to Remote Repository ─────────────────────────
       - name: 🚀 Push to GitHub
         run: |
-          git push origin main
+          git push origin HEAD
 
       - name: Wait for GitHub Pages Deployment
-        if: success()
+        if: success() && github.ref_name == 'main'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PAGES_COMMIT_SHA: ${{ env.PAGES_COMMIT_SHA }}
         run: |
           python scripts/pages_status.py
+
+      - name: Skip GitHub Pages Wait on Feature Branches
+        if: success() && github.ref_name != 'main'
+        env:
+          PAGES_COMMIT_SHA: ${{ env.PAGES_COMMIT_SHA }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: |
+          python -c "import json, os; open('.pages_result.json', 'w', encoding='utf-8').write(json.dumps({'status': 'skipped', 'conclusion': 'feature_branch', 'run_url': '', 'commit_sha': os.environ.get('PAGES_COMMIT_SHA', ''), 'branch': os.environ.get('GITHUB_REF_NAME', ''), 'message': 'GitHub Pages deploy waits are skipped outside main because deploy.yml only auto-runs on main.'}, indent=2))"
 
       - name: 🧹 Clear Successful Checkpoint
         if: success()
