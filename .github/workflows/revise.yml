@@ -1,4 +1,4 @@
-name: Obsidian Review Revision
+name: 🧠 Obsidian Review Revision
 
 on:
   workflow_dispatch:

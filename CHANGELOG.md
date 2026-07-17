@@ -6,6 +6,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.19.3] — 2026-07-17
+
+### Changed
+- **Workflow Display Name**: Added a leading emoji to the Obsidian review revision workflow for consistency with the other GitHub Actions entries.
+
+---
+
 ## [1.19.2] — 2026-07-17
 
 ### Added
