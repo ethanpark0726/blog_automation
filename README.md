@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-3.1%20Flash--Lite-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.19.1-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.19.2-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -239,7 +239,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.19.1** — Adds a mandatory pre-merge branch audit so feature-branch GitHub Actions post commits are not missed.
+**v1.19.2** — Backfills stable `post_id` values for legacy posts so Phase 4 review revisions can target older content.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -262,6 +262,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.18.0**: Phase 3 Obsidian knowledge-note generation and Gemini 3.1 Flash-Lite default
 - **`[x]` v1.19.0**: Phase 4 Obsidian review-note revision workflow
 - **`[x]` v1.19.1**: Mandatory pre-merge branch audit for feature-branch Actions-generated post commits
+- **`[x]` v1.19.2**: Legacy post_id backfill for Phase 4 revision testing
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 

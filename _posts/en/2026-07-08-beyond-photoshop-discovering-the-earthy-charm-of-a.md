@@ -12,6 +12,7 @@ tags:
   - Thermal Mass
 lang: en
 topic_id: "adobe-architecture"
+post_id: "adobe-architecture-0e0dace8"
 description: "Unpack the sustainable secrets of Adobe architecture, from its sun-dried mud bricks to its natural air conditioning, in a friendly, dad-mode guide."
 ---
 

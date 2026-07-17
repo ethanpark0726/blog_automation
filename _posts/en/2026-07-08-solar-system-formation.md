@@ -11,6 +11,7 @@ tags:
   - creation
 lang: en
 topic_id: "solar-system-formation"
+post_id: "solar-system-formation-d0fca2e0"
 description: "Solar System Formation에 대한 블로그 포스트"
 ---
 

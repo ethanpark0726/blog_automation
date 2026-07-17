@@ -14,6 +14,7 @@ tags:
   - Travel
 lang: en
 topic_id: "why-does-santa-fe-new-mexico-sell-a-lot-"
+post_id: "why-does-santa-fe-new-mexico-sell-a-lot--530fb6ad"
 description: "Uncover the multifaceted reasons behind Santa Fe's booming turquoise jewelry market, blending history, culture, geology, and tourism."
 ---
 

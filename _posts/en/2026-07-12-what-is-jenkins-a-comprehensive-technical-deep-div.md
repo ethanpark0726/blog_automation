@@ -14,6 +14,7 @@ tags:
   - Pipeline-as-Code
 lang: en
 topic_id: "jenkins"
+post_id: "jenkins-424e9661"
 description: "Explore Jenkins: the open-source automation server powering CI/CD, its architecture, features, and real-world implications. Also, delve into Jenkins hash functions for efficient data processing."
 ---
 

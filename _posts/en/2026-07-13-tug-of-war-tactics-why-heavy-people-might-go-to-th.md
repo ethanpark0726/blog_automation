@@ -14,6 +14,7 @@ tags:
   - Tactics
 lang: en
 topic_id: "tug-of-war-weight-distribution"
+post_id: "tug-of-war-weight-distribution-975787c6"
 description: "Explore the theoretical physics of tug-of-war to understand proposed optimal team weight distribution. Learn about friction, center of mass, and why placing heavy players at the back is often suggested to create a stable anchor."
 ---
 

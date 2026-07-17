@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.19.2] — 2026-07-17
+
+### Added
+- **Post ID Backfill for Phase 4 Testing**: Hardened `scripts/backfill_post_ids.py` so legacy KO/EN post pairs sharing a `topic_id` receive the same stable `post_id`.
+- **Backfill Tests**: Added coverage to verify bilingual pairs receive matching IDs and existing IDs are reused.
+
+### Changed
+- **Legacy Posts**: Backfilled missing `post_id` front matter across existing posts so older content can be targeted by Obsidian review revision notes.
+
+---
+
 ## [1.19.1] — 2026-07-17
 
 ### Changed

@@ -21,6 +21,7 @@ tags:
   - Technology History
 lang: en
 topic_id: "multiple-meanings-of-the-acronym-mcp"
+post_id: "multiple-meanings-of-the-acronym-mcp-e05da92a"
 request_fingerprint: "8f9fd872be56d10e0be6"
 description: "Explore the diverse meanings of MCP, from the pioneering Burroughs Master Control Program and the Mod Coder Pack for Minecraft, to the Malayan Communist Party and the Model Context Protocol in AI, complete with historical context and technical details."
 ---

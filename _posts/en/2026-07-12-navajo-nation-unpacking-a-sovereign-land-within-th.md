@@ -13,6 +13,7 @@ tags:
   - US History
 lang: en
 topic_id: "navajo-nation"
+post_id: "navajo-nation-c32709c2"
 description: "Explore the Navajo Nation's unique government, vast territory, and rich history, including its chapters and agencies."
 ---
 

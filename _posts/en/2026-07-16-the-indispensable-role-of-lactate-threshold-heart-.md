@@ -16,6 +16,7 @@ tags:
   - Training Methodology
 lang: en
 topic_id: "lactate-threshold-heart-rate-based-zone-"
+post_id: "lactate-threshold-heart-rate-based-zone--d54c4499"
 request_fingerprint: "041e8ffe576f02d84b58"
 description: "Explore the profound physiological benefits and practical application of calibrating Zone 2 training using Lactate Threshold Heart Rate (LTHR). This article details mechanisms like mitochondrial biogenesis and fat oxidation, compares LTHR to Max HR methods, provides historical context, and offers practical examples including code and diagrams for precise endurance training."
 ---

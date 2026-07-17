@@ -10,6 +10,7 @@ tags:
   - automotive history
 lang: en
 topic_id: "octane-rating-variation"
+post_id: "octane-rating-variation-a5c5fbbf"
 description: "Dive into the world of octane ratings! Learn what octane means, how it prevents engine knocking, and its historical journey from leaded to modern fuels."
 ---
 
