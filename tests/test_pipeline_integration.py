@@ -16,11 +16,15 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 
 
 def load_pipeline_module():
-    fake_genai = types.ModuleType("google.generativeai")
-    fake_genai.configure = lambda **_kwargs: None
-    fake_genai.GenerativeModel = lambda **_kwargs: object()
+    fake_genai = types.ModuleType("google.genai")
+
+    class FakeClient:
+        def __init__(self, **_kwargs):
+            self.models = SimpleNamespace(generate_content=lambda **_kwargs: object())
+
+    fake_genai.Client = FakeClient
     fake_google = types.ModuleType("google")
-    fake_google.generativeai = fake_genai
+    fake_google.genai = fake_genai
 
     spec = importlib.util.spec_from_file_location(
         "multi_agent_integration_test",
@@ -32,7 +36,7 @@ def load_pipeline_module():
         {"GEMINI_API_KEY": "test-key", "QUERY_INPUT": "How was our Solar System formed?"},
     ), patch.dict(
         sys.modules,
-        {"google": fake_google, "google.generativeai": fake_genai},
+        {"google": fake_google, "google.genai": fake_genai},
     ):
         spec.loader.exec_module(module)
     return module
@@ -62,6 +66,26 @@ def article(lang: str) -> str:
 
 
 class PipelineIntegrationTests(unittest.TestCase):
+    def test_gemini_adapter_maps_generation_config_to_genai_config(self):
+        pipeline = load_pipeline_module()
+        calls = []
+        client = SimpleNamespace(
+            models=SimpleNamespace(
+                generate_content=lambda **kwargs: calls.append(kwargs) or SimpleNamespace(text="ok")
+            )
+        )
+        adapter = pipeline.GeminiModelAdapter(client, "gemini-test")
+
+        response = adapter.generate_content(
+            "hello",
+            generation_config={"temperature": 0.2, "max_output_tokens": 10},
+        )
+
+        self.assertEqual(response.text, "ok")
+        self.assertEqual(calls[0]["model"], "gemini-test")
+        self.assertEqual(calls[0]["contents"], "hello")
+        self.assertEqual(calls[0]["config"]["temperature"], 0.2)
+
     def test_full_offline_pipeline_uses_three_successful_calls(self):
         pipeline = load_pipeline_module()
         stages = []

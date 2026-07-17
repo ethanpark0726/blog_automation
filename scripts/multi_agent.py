@@ -23,7 +23,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-import google.generativeai as genai
+from google import genai
 
 from content_quality import (
     ContentValidationError,
@@ -59,8 +59,25 @@ if not QUERY_INPUT:
     sys.exit(1)
 
 # ── Initialize Gemini ───────────────────────────────────────────────────────
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel(model_name=GEMINI_MODEL)
+class GeminiModelAdapter:
+    """Expose the legacy model.generate_content shape over google-genai Client."""
+
+    def __init__(self, client: genai.Client, model_name: str) -> None:
+        self.client = client
+        self.model_name = model_name
+
+    def generate_content(self, prompt: str, generation_config: dict | None = None):
+        kwargs = {
+            "model": self.model_name,
+            "contents": prompt,
+        }
+        if generation_config is not None:
+            kwargs["config"] = generation_config
+        return self.client.models.generate_content(**kwargs)
+
+
+client = genai.Client(api_key=GEMINI_API_KEY)
+model = GeminiModelAdapter(client, GEMINI_MODEL)
 usage_tracker = UsageTracker()
 
 STAGE_GENERATION_CONFIGS = {

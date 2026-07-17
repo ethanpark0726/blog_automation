@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.17.0] — 2026-07-17
+
+### Changed
+- **Gemini SDK Migration**: Replaced the deprecated `google-generativeai` dependency with the GA `google-genai` SDK and now initialize Gemini through `genai.Client`.
+- **Runtime Compatibility Adapter**: Added a small adapter that preserves the existing `model.generate_content(...)` runtime contract, keeping quota-aware retries, usage accounting, and stage generation settings centralized in `gemini_runtime.py`.
+
+### Testing
+- **Updated Integration Fakes**: Updated pipeline integration tests to fake `google.genai` instead of the deprecated `google.generativeai` module.
+
+---
+
 ## [1.16.2] — 2026-07-17
 
 ### Fixed

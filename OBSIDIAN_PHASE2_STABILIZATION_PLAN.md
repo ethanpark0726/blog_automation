@@ -64,6 +64,12 @@ Recommended migration timing:
 - Complete it after Phase 2 post-ID stabilization.
 - Complete it before Phase 3 knowledge-note generation.
 
+Implementation status:
+
+- Branch: `codex/phase2-5-gemini-genai`
+- Package migration: in progress from `google-generativeai` to `google-genai`
+- Runtime strategy: preserve the existing `gemini_runtime.call_gemini()` contract through a small adapter around `genai.Client`
+
 Implementation plan:
 
 1. Replace `google-generativeai` with `google-genai` in `scripts/requirements.txt`.
