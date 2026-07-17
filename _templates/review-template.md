@@ -4,7 +4,7 @@ scope: bilingual
 status: ready
 ---
 
-# 수정 요청
+# Revision Request
 
-- 수정할 내용 1
-- 수정할 내용 2
+- Add the specific change you want reflected in both KO and EN posts.
+- Keep requests factual and concrete.

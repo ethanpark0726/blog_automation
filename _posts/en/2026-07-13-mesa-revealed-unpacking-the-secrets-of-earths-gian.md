@@ -11,6 +11,7 @@ tags:
   - Plateau
 lang: en
 topic_id: "mesa-landform-formation"
+post_id: "mesa-landform-formation-c71f2d5f"
 description: "Explore what a mesa is and how these flat-topped geological wonders are conceptually formed, based on available insights."
 ---
 

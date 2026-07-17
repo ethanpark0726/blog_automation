@@ -18,6 +18,7 @@ tags:
   - TWS
 lang: en
 topic_id: "airpods-automatic-ear-detection-technolo"
+post_id: "airpods-automatic-ear-detection-technolo-64305976"
 request_fingerprint: "6bbd0b0c2a6d6f5af026"
 description: "Explore the sophisticated sensor technology and intelligent algorithms behind Apple AirPods' automatic ear detection feature, explaining how they know when you remove an earbud and pause playback. This article details the role of optical sensors, accelerometers, gyroscopes, and the H1 chip, along with historical context and practical examples."
 ---

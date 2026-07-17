@@ -1,0 +1,48 @@
+name: Obsidian Review Revision
+
+on:
+  workflow_dispatch:
+
+jobs:
+  revise:
+    name: Apply Ready Review Notes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Run Offline Tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Apply Review Notes
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || secrets.GEMINI_MODEL || 'gemini-3.1-flash-lite' }}
+        run: python scripts/revise_post.py
+
+      - name: Commit Revision Changes
+        run: |
+          git config --global user.email "blog-bot@github-actions.com"
+          git config --global user.name "Blog Automation Bot"
+          git add _posts/ _knowledge/ _reviews/
+          if git diff --staged --quiet; then
+            echo "No revision changes to commit."
+          else
+            git commit -m "feat: apply Obsidian review revisions"
+            git push origin HEAD
+          fi

@@ -6,6 +6,35 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.19.2] — 2026-07-17
+
+### Added
+- **Post ID Backfill for Phase 4 Testing**: Hardened `scripts/backfill_post_ids.py` so legacy KO/EN post pairs sharing a `topic_id` receive the same stable `post_id`.
+- **Backfill Tests**: Added coverage to verify bilingual pairs receive matching IDs and existing IDs are reused.
+
+### Changed
+- **Legacy Posts**: Backfilled missing `post_id` front matter across existing posts so older content can be targeted by Obsidian review revision notes.
+
+---
+
+## [1.19.1] — 2026-07-17
+
+### Changed
+- **Pre-Merge Branch Audit Rule**: Added a mandatory final branch audit to `CONTRIBUTING.md` so GitHub Actions generated post commits on feature branches are not missed before merge or branch deletion.
+
+---
+
+## [1.19.0] — 2026-07-17
+
+### Added
+- **Obsidian Review Revision Workflow (Phase 4)**: Added `scripts/revise_post.py` and `.github/workflows/revise.yml` to apply ready `_reviews/pending` notes to paired KO/EN posts.
+- **Revision Tests**: Added parser and paired-post revision coverage for review notes.
+
+### Changed
+- **Review Templates**: Rewrote the review-note template and example in clearer English so generated review requests are easier to validate and automate.
+
+---
+
 ## [1.18.0] — 2026-07-17
 
 ### Added

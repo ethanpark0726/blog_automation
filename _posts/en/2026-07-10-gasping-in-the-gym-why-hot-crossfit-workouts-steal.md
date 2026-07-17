@@ -13,6 +13,7 @@ tags:
   - heat acclimatization
 lang: en
 topic_id: "crossfit-heat-science"
+post_id: "crossfit-heat-science-d1e480f2"
 description: "Ever wonder why breathing is so hard during hot CrossFit? Learn the science behind it, from overheating to dehydration, and get tips to stay safe."
 ---
 

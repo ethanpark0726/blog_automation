@@ -13,6 +13,7 @@ tags:
   - History of Railways
 lang: en
 topic_id: "narrow-gauge-railways-and-their-turning-"
+post_id: "narrow-gauge-railways-and-their-turning--0b37b7cd"
 description: "Dive deep into why narrow gauge railways excel at navigating tight curves, their historical role, and engineering benefits."
 ---
 

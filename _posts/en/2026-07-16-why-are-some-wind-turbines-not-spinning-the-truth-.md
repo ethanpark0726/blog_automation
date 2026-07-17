@@ -15,6 +15,7 @@ tags:
   - environmental science
 lang: en
 topic_id: "reasons-why-wind-turbines-stop-spinning"
+post_id: "reasons-why-wind-turbines-stop-spinning-0b6709f8"
 request_fingerprint: "989169348ea71d5e9ffd"
 description: "Ever wondered why some wind turbines you see on a road trip aren't spinning? This article explains the common, and often normal, reasons behind motionless wind turbine blades, from low and high wind speeds to maintenance, grid demand, and sophisticated control systems."
 ---

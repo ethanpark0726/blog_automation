@@ -17,6 +17,7 @@ tags:
   - 스마트워치
 lang: ko
 topic_id: "garmin-elevation-calibration-methods-dem"
+post_id: "garmin-elevation-calibration-methods-dem-64d06b25"
 request_fingerprint: "97ce9393373f3a86b479"
 description: "Garmin 장치에 사용되는 수치 표고 모델(DEM) 및 GPS 기반 고도 보정 방법의 상세 비교. 정확한 고도 추적을 위한 메커니즘, 장단점, 역사적 맥락 및 실용적인 적용을 이해하세요."
 ---
