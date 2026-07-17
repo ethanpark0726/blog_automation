@@ -67,6 +67,30 @@ class FakeModel:
         )
 
 
+class ShortThenFullModel:
+    def __init__(self):
+        self.calls = 0
+
+    def generate_content(self, _prompt, generation_config=None):
+        del generation_config
+        self.calls += 1
+        ko = "## 소개\n\n" + ("수정된 한국어 본문입니다. " * 90)
+        ko += "\n\n## 상세 내용\n\n" + ("보강된 설명입니다. " * 90)
+        if self.calls == 1:
+            en = "## Introduction\n\nToo short.\n\n## Details\n\nStill too short."
+        else:
+            en = "## Introduction\n\n" + ("Revised English body. " * 260)
+            en += "\n\n## Details\n\n" + ("Expanded explanation. " * 260)
+        return SimpleNamespace(
+            text=json.dumps({"ko": ko, "en": en}, ensure_ascii=False),
+            usage_metadata=SimpleNamespace(
+                prompt_token_count=10,
+                candidates_token_count=20,
+                total_token_count=30,
+            ),
+        )
+
+
 class RevisePostTests(unittest.TestCase):
     def test_parse_and_discover_ready_review(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -152,6 +176,35 @@ status: ready
                 self.assertIn("수정된 한국어", ko_path.read_text(encoding="utf-8"))
                 self.assertIn("Revised English", en_path.read_text(encoding="utf-8"))
                 self.assertTrue((root / "_knowledge" / "concepts" / "topic.md").exists())
+            finally:
+                os.chdir(original_cwd)
+
+    def test_apply_revision_repairs_short_model_response_before_writing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            post_id = "paired-123"
+            (root / "_posts" / "ko").mkdir(parents=True)
+            (root / "_posts" / "en").mkdir(parents=True)
+            ko_path = root / "_posts" / "ko" / "post.md"
+            en_path = root / "_posts" / "en" / "post.md"
+            ko_path.write_text(post("ko", post_id), encoding="utf-8")
+            en_path.write_text(post("en", post_id), encoding="utf-8")
+            review = ReviewRequest(
+                path=root / "_reviews" / "pending" / "request.md",
+                target_post_id=post_id,
+                instructions=["Add one paragraph."],
+            )
+            model = ShortThenFullModel()
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                changed = apply_revision(review, model, SimpleNamespace(
+                    record_attempt=lambda _stage: None,
+                    record_success=lambda _stage, _response: None,
+                ))
+                self.assertEqual(2, model.calls)
+                self.assertIn("_posts/en/post.md", {Path(path).as_posix() for path in changed})
+                self.assertIn("Revised English", en_path.read_text(encoding="utf-8"))
             finally:
                 os.chdir(original_cwd)
 

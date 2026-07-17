@@ -6,6 +6,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.19.7] — 2026-07-17
+
+### Fixed
+- **Revision Full-Body Repair**: Added a repair attempt when Gemini returns a shortened revision response, preventing partial English/Korean bodies from being written and retrying with explicit full-body validation errors.
+
+---
+
 ## [1.19.6] — 2026-07-17
 
 ### Fixed

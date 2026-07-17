@@ -22,6 +22,7 @@ DEFAULT_REVIEW_DIR = Path("_reviews/pending")
 COMPLETED_REVIEW_DIR = Path("_reviews/completed")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "").strip() or "gemini-3.1-flash-lite"
 REVISION_CONFIG = {"temperature": 0.2, "max_output_tokens": 16384}
+MAX_REVISION_ATTEMPTS = 2
 
 
 @dataclass
@@ -143,10 +144,12 @@ You are revising an already-published bilingual blog post from an Obsidian revie
 
 Rules:
 1. Apply the requested changes to both Korean and English when scope is bilingual.
-2. Preserve front matter exactly outside the body. Return body content only.
+2. Return the complete revised body for each language, not a summary, excerpt, diff, or only the changed paragraph.
 3. Preserve the existing Markdown style, headings, tables, code blocks, and references.
 4. Do not add unsupported facts, fake URLs, or invented citations.
 5. Keep at least two level-2 headings in each body.
+6. The English body must remain at least 450 words. The Korean body must remain at least 1,200 characters.
+7. Preserve front matter exactly outside the body. Return body content only.
 
 Review scope: {review.scope}
 Review instructions:
@@ -170,6 +173,57 @@ Return JSON only:
 """
 
 
+def revision_retry_prompt(
+    review: ReviewRequest,
+    posts: dict[str, str],
+    previous_response: dict[str, str],
+    errors: dict[str, list[str]],
+) -> str:
+    formatted_errors = "\n".join(
+        f"- {lang}: {'; '.join(messages)}" for lang, messages in sorted(errors.items())
+    )
+    return f"""
+The previous revision response failed local validation.
+
+Validation errors:
+{formatted_errors}
+
+You must return JSON only with complete full revised bodies for both languages.
+Do not return only the changed section. Do not summarize. Do not omit existing sections.
+The English body must be at least 450 words and the Korean body must be at least 1,200 characters.
+
+Original Korean body:
+---
+{posts.get("ko", "")}
+---
+
+Original English body:
+---
+{posts.get("en", "")}
+---
+
+Previous invalid Korean response:
+---
+{previous_response.get("ko", "")}
+---
+
+Previous invalid English response:
+---
+{previous_response.get("en", "")}
+---
+
+Review scope: {review.scope}
+Review instructions:
+{chr(10).join(f"- {item}" for item in review.instructions)}
+
+Return JSON only:
+{{
+  "ko": "complete revised Korean body",
+  "en": "complete revised English body"
+}}
+"""
+
+
 def parse_revision_response(raw: str) -> dict[str, str]:
     cleaned = raw.strip()
     if cleaned.startswith("```"):
@@ -179,13 +233,62 @@ def parse_revision_response(raw: str) -> dict[str, str]:
     return {lang: str(payload.get(lang) or "").strip() for lang in ("ko", "en")}
 
 
-def validate_revised_body(front_matter: str, body: str, lang: str) -> None:
+def revised_body_errors(front_matter: str, body: str, lang: str) -> list[str]:
     content = f"{front_matter}{body.strip()}\n"
     result = validate_post(content, lang, [])
     # Published posts no longer include json_meta after FileWriter strips it.
     result.errors = [error for error in result.errors if error != "missing json_meta block"]
-    if not result.valid:
-        raise ContentValidationError(lang, result.errors)
+    return [] if result.valid else result.errors
+
+
+def validate_revised_body(front_matter: str, body: str, lang: str) -> None:
+    errors = revised_body_errors(front_matter, body, lang)
+    if errors:
+        raise ContentValidationError(lang, errors)
+
+
+def request_revision(
+    review: ReviewRequest,
+    model: GeminiModelAdapter,
+    tracker: UsageTracker,
+    bodies: dict[str, str],
+    front_matters: dict[str, str],
+) -> dict[str, str]:
+    prompt = revision_prompt(review, bodies)
+    last_revised: dict[str, str] = {}
+    last_errors: dict[str, list[str]] = {}
+
+    for attempt in range(1, MAX_REVISION_ATTEMPTS + 1):
+        raw = call_gemini(
+            model,
+            prompt,
+            "revision_bilingual" if attempt == 1 else "revision_bilingual_repair",
+            tracker,
+            generation_config=REVISION_CONFIG,
+        )
+        revised = parse_revision_response(raw)
+
+        errors: dict[str, list[str]] = {}
+        for lang in ("ko", "en"):
+            body = revised.get(lang, "").strip()
+            if not body:
+                errors[lang] = [f"Revision response missing {lang} body"]
+                continue
+            body_errors = revised_body_errors(front_matters[lang], body, lang)
+            if body_errors:
+                errors[lang] = body_errors
+
+        if not errors:
+            return revised
+
+        last_revised = revised
+        last_errors = errors
+        if attempt < MAX_REVISION_ATTEMPTS:
+            print(f"[Revision] Validation failed on attempt {attempt}; requesting full-body repair: {errors}")
+            prompt = revision_retry_prompt(review, bodies, revised, errors)
+
+    first_lang, first_errors = next(iter(last_errors.items()))
+    raise ContentValidationError(first_lang, first_errors)
 
 
 def apply_revision(review: ReviewRequest, model: GeminiModelAdapter, tracker: UsageTracker) -> list[str]:
@@ -203,20 +306,11 @@ def apply_revision(review: ReviewRequest, model: GeminiModelAdapter, tracker: Us
         front_matters[lang] = front_matter
         bodies[lang] = body
 
-    raw = call_gemini(
-        model,
-        revision_prompt(review, bodies),
-        "revision_bilingual",
-        tracker,
-        generation_config=REVISION_CONFIG,
-    )
-    revised = parse_revision_response(raw)
+    revised = request_revision(review, model, tracker, bodies, front_matters)
 
     updated_paths = []
     for lang, path in post_paths.items():
         body = revised.get(lang, "").strip()
-        if not body:
-            raise ValueError(f"Revision response missing {lang} body")
         validate_revised_body(front_matters[lang], body, lang)
         path.write_text(f"{front_matters[lang]}{body}\n", encoding="utf-8")
         updated_paths.append(str(path))
