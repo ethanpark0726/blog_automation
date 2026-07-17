@@ -283,6 +283,36 @@ Link: https://en.wikipedia.org/wiki/MCP
         self.assertIn('"title": "MCP란 무엇인가?"', localized)
         self.assertIn("https://en.wikipedia.org/wiki/MCP", localized)
 
+    def test_research_writer_recovers_missing_draft_metadata_block(self):
+        pipeline = load_pipeline_module()
+        raw = """## Introduction
+
+This draft explains hands-on detection in driver assistance systems.
+
+## Sensor Comparison
+
+Capacitive sensing and torque sensing measure different signals.
+
+```json_research
+{
+  "canonical_topic_en": "Capacitive vs torque steering-wheel hands-on detection",
+  "search_queries_en": [
+    "capacitive steering wheel hands on detection",
+    "torque sensor hands on detection driver assistance"
+  ],
+  "intent_summary_en": "Explain the difference between capacitive and torque sensors for steering-wheel hands-on detection."
+}
+```"""
+
+        plan, draft = pipeline.ResearchWriterAgent._parse_output(raw)
+
+        self.assertEqual(
+            plan["canonical_topic_en"],
+            "Capacitive vs torque steering-wheel hands-on detection",
+        )
+        self.assertIn("```json_meta", draft)
+        self.assertIn('"title": "Capacitive vs torque steering-wheel hands-on detection"', draft)
+
 
 if __name__ == "__main__":
     unittest.main()

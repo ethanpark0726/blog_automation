@@ -389,7 +389,12 @@ Output only the complete English article followed by the `json_research` block.
 
         draft = cls.RESEARCH_PATTERN.sub("", raw).strip()
         if "```json_meta" not in draft:
-            raise ResearchPlanError("Research writer draft is missing json_meta")
+            draft = append_missing_metadata_block(
+                draft,
+                title=topic,
+                description=str(payload.get("intent_summary_en") or f"An article about {topic}."),
+                tags=queries[:3],
+            )
         plan = {
             "canonical_topic_en": topic[:160],
             "search_queries_en": queries[:4],
