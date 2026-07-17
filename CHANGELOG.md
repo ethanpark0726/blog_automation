@@ -6,6 +6,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.19.5] — 2026-07-17
+
+### Fixed
+- **Docs Rule Exemptions**: Excluded `_reviews/` and `_knowledge/` operational content changes from the README/CHANGELOG enforcement rule, so review-note inputs can be committed without unrelated documentation updates.
+
+---
+
 ## [1.19.4] — 2026-07-17
 
 ### Fixed

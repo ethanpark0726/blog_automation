@@ -1,7 +1,12 @@
 name: 📋 Docs Update Enforcer
 
-# Automatically checks that README and CHANGELOG are also updated
-# whenever code, scripts, or configuration files are changed.
+# Automatically checks that README and CHANGELOG are also updated whenever
+# code, scripts, or configuration files are changed.
+#
+# Operational content is exempt:
+# - _posts/: generated blog posts
+# - _knowledge/: generated Obsidian notes
+# - _reviews/: review-note inputs and completed revision records
 
 on:
   push:
@@ -15,10 +20,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout
+      - name: 🔍 Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2  # Fetch 2 commits to allow comparison with the previous commit
+          fetch-depth: 2
 
       - name: 🔍 Detect Changed Files
         id: changes
@@ -29,50 +34,44 @@ jobs:
 
           CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD)
 
-          # Check if only _posts/ changed (auto-generated posts are exempt)
-          NON_POST_CHANGES=$(echo "$CHANGED" | grep -v '^_posts/' | grep -v '^\.git' || true)
+          DOC_REQUIRED_CHANGES=$(echo "$CHANGED" \
+            | grep -v '^_posts/' \
+            | grep -v '^_knowledge/' \
+            | grep -v '^_reviews/' \
+            | grep -v '^\.git' || true)
           README_CHANGED=$(echo "$CHANGED" | grep -c 'README.md' || true)
           CHANGELOG_CHANGED=$(echo "$CHANGED" | grep -c 'CHANGELOG.md' || true)
 
-          echo "non_post_changes<<EOF" >> $GITHUB_OUTPUT
-          echo "$NON_POST_CHANGES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          echo "readme_changed=$README_CHANGED" >> $GITHUB_OUTPUT
-          echo "changelog_changed=$CHANGELOG_CHANGED" >> $GITHUB_OUTPUT
+          echo "doc_required_changes<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$DOC_REQUIRED_CHANGES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+          echo "readme_changed=$README_CHANGED" >> "$GITHUB_OUTPUT"
+          echo "changelog_changed=$CHANGELOG_CHANGED" >> "$GITHUB_OUTPUT"
 
           echo ""
           echo "=== Analysis Results ==="
-          echo "Non-post changed files: $(echo "$NON_POST_CHANGES" | grep -c . || true)"
+          echo "Doc-required changed files: $(echo "$DOC_REQUIRED_CHANGES" | grep -c . || true)"
           echo "README updated: $README_CHANGED"
           echo "CHANGELOG updated: $CHANGELOG_CHANGED"
 
       - name: ✅ Enforce Docs Update Rule
         run: |
           git config core.quotePath false
-          CHANGED="${{ steps.changes.outputs.non_post_changes }}"
+          CHANGED="${{ steps.changes.outputs.doc_required_changes }}"
           README_CHANGED="${{ steps.changes.outputs.readme_changed }}"
           CHANGELOG_CHANGED="${{ steps.changes.outputs.changelog_changed }}"
 
-          # If no files changed outside _posts/ (auto-posts only) → skip check
           if [ -z "$(echo "$CHANGED" | tr -d '[:space:]')" ]; then
-            echo "✅ Auto-generated post commit — skipping docs update check"
+            echo "Operational content-only commit: skipping docs update check"
             exit 0
           fi
 
-          # Also skip if only README.md or CHANGELOG.md themselves changed
-          if echo "$CHANGED" | grep -qE '^(README|CHANGELOG)\.md$'; then
-            ONLY_DOCS=true
-          else
-            ONLY_DOCS=false
-          fi
-
-          echo "=== Changed Files ==="
+          echo "=== Changed Files Requiring Docs ==="
           echo "$CHANGED"
           echo ""
 
           FAILED=0
 
-          # README check
           if [ "$README_CHANGED" = "0" ]; then
             echo "❌ README.md has not been updated!"
             FAILED=1
@@ -80,7 +79,6 @@ jobs:
             echo "✅ README.md update confirmed"
           fi
 
-          # CHANGELOG check
           if [ "$CHANGELOG_CHANGED" = "0" ]; then
             echo "❌ CHANGELOG.md has not been updated!"
             FAILED=1
