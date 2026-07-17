@@ -6,7 +6,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
 import sys
 import urllib.parse
 import urllib.request
@@ -479,11 +478,61 @@ def apply_revision(review: ReviewRequest, model: GeminiModelAdapter, tracker: Us
     return updated_paths
 
 
-def complete_review(review: ReviewRequest) -> Path:
+def mark_review_completed(text: str, completed_at: str, changed_files: Iterable[str]) -> str:
+    changed = [Path(path).as_posix() for path in changed_files]
+    summary_lines = [
+        "",
+        "## Completion Summary",
+        "",
+        f"- Completed at: `{completed_at}`",
+        "- Updated files:",
+    ]
+    summary_lines.extend(f"  - `{path}`" for path in changed)
+    summary = "\n".join(summary_lines).rstrip() + "\n"
+
+    if text.startswith("---\n"):
+        end = text.find("\n---\n", 4)
+        if end >= 0:
+            front_matter = text[:end]
+            body = text[end:]
+            if re.search(r"^status:\s*.+$", front_matter, flags=re.MULTILINE):
+                front_matter = re.sub(
+                    r"^status:\s*.+$",
+                    "status: completed",
+                    front_matter,
+                    count=1,
+                    flags=re.MULTILINE,
+                )
+            else:
+                front_matter = f"{front_matter}\nstatus: completed"
+
+            if re.search(r"^completed_at:\s*.+$", front_matter, flags=re.MULTILINE):
+                front_matter = re.sub(
+                    r"^completed_at:\s*.+$",
+                    f'completed_at: "{completed_at}"',
+                    front_matter,
+                    count=1,
+                    flags=re.MULTILINE,
+                )
+            else:
+                front_matter = f'{front_matter}\ncompleted_at: "{completed_at}"'
+            return f"{front_matter}{body.rstrip()}\n\n{summary}"
+
+    return f"{text.rstrip()}\n\n{summary}"
+
+
+def complete_review(review: ReviewRequest, changed_files: Iterable[str]) -> Path:
     COMPLETED_REVIEW_DIR.mkdir(parents=True, exist_ok=True)
+    completed_at = datetime.now(timezone.utc).isoformat()
     stamped_name = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{review.path.name}"
     target = COMPLETED_REVIEW_DIR / stamped_name
-    shutil.move(str(review.path), str(target))
+    completed_text = mark_review_completed(
+        review.path.read_text(encoding="utf-8"),
+        completed_at,
+        changed_files,
+    )
+    target.write_text(completed_text, encoding="utf-8")
+    review.path.unlink()
     return target
 
 
@@ -506,10 +555,13 @@ def main(argv: Iterable[str] | None = None) -> None:
     changed_files: list[str] = []
     completed_files: list[str] = []
 
+    print(f"[Revision] Model: {GEMINI_MODEL}")
+
     for review in reviews:
         print(f"[Revision] Applying {review.path}")
-        changed_files.extend(apply_revision(review, model, tracker))
-        completed_files.append(str(complete_review(review)))
+        review_changed_files = apply_revision(review, model, tracker)
+        changed_files.extend(review_changed_files)
+        completed_files.append(str(complete_review(review, review_changed_files)))
 
     env_path = os.environ.get("GITHUB_ENV")
     if env_path:

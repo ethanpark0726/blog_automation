@@ -239,7 +239,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.19.8** — Adds Phase 4.1 review-driven research and preservation guardrails for minimal post enrichment.
+**v1.19.9** — Adds completion audit records for Obsidian review revisions and aligns regeneration model configuration.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -269,6 +269,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.19.6**: Short post_id suffix support for Phase 4 review notes
 - **`[x]` v1.19.7**: Full-body repair retry for shortened Phase 4 revision responses
 - **`[x]` v1.19.8**: Phase 4.1 review-driven research and minimal-enrichment guardrails
+- **`[x]` v1.19.9**: Completed review audit summaries and explicit regeneration model configuration
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 

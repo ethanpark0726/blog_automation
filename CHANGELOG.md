@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.19.9] — 2026-07-17
+
+### Added
+- **Review Completion Audit Trail**: Completed Obsidian review notes now record completion time and the exact post/knowledge files changed by the revision workflow.
+
+### Changed
+- **Revision Model Visibility**: The revision workflow now prints the active Gemini model before applying ready review notes.
+- **Regeneration Model Configuration**: The manual regeneration workflow now uses the same explicit `GEMINI_MODEL` fallback chain as the Telegram and Obsidian revision workflows.
+
+---
+
 ## [1.19.8] — 2026-07-17
 
 ### Added
