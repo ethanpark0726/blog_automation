@@ -19,7 +19,7 @@ description: "Unpack the sustainable secrets of Adobe architecture, from its sun
 
 At its core, Adobe architecture is the practice of building structures using sun-dried mud bricks. The process involves mixing earth with water and organic fibers like straw, placing the mixture into molds, and allowing it to dry under the sun. It is crucial to note that these bricks are not fired in a kiln. If adobe bricks were fired, the clay particles would vitrify, causing the material to lose its ability to "breathe." This would destroy the natural humidity-regulating and thermal properties of the earth, while also making the bricks brittle and prone to cracking under structural stress or seismic activity.
 
-This method is an ancient, sustainable practice that allows structures to exist in harmony with their environment, eventually returning to the earth from which they came.
+While Korean traditional earth houses (Hwangto-jip) often utilize a timber frame with mud infill, Adobe architecture relies on the bricks themselves as the primary structural load-bearing element. This distinction highlights different regional approaches to using earth as a building material.
 
 ```mermaid
 graph TD
@@ -36,11 +36,15 @@ Adobe architecture is not merely a collection of mud; it is a sophisticated syst
 
 ### 1. Thermal Mass and Heat Regulation 🌬️🔥
 
-One of the primary advantages of adobe is its exceptional thermal mass. The thick earthen walls absorb the sun's heat slowly during the day. At night, they release this stored heat into the interior. The reason this heat does not simply dissipate outward is due to the high density and low thermal conductivity of the thick walls. The wall acts as a thermal battery; because of the wall's thickness, the heat remains trapped within the material, slowly migrating toward the interior as the outside temperature drops, rather than escaping into the external environment.
+One of the primary advantages of adobe is its exceptional 'thermal mass.' Think of thermal mass as a battery for heat. Because adobe walls are very thick and dense, they act like a sponge for energy. During the day, the walls slowly absorb the sun's heat, preventing it from entering the interior. At night, when the temperature drops, the walls release that stored heat back into the living space.
 
-### 2. Traditional vs. Modern Adobe Construction 🏗️
+Why doesn't the heat escape outward? Earth is a material with low thermal conductivity, meaning it moves heat very slowly. Because the walls are so thick, the heat absorbed during the day takes a long time to travel through the material. By the time the heat reaches the inner surface of the wall, the outside temperature has dropped, and the wall begins to release that warmth inward. It is a natural, scientific process of time-delayed insulation that keeps the interior comfortable without mechanical heating or cooling.
 
-Traditional adobe construction relied solely on earth, water, and straw, often built directly on the ground without formal foundations. In contrast, modern adobe architecture incorporates structural engineering to meet contemporary safety standards. For instance, a recent construction project in New Mexico utilized traditional adobe bricks but integrated a reinforced concrete foundation and internal steel rebar to ensure seismic resilience. Furthermore, modern builders often incorporate high-performance insulation layers within the wall assembly and apply breathable, weather-resistant sealants to the exterior, significantly increasing the lifespan and durability of the structure while maintaining the traditional aesthetic.
+### 2. Why Adobe Walls Look Seamless 🏗️
+
+If you have traveled through New Mexico, you may have noticed that the individual bricks are often invisible. This is because builders apply a layer of 'adobe plaster'—a mixture of the same earth and fibers—over the entire wall surface. This finishing layer creates a monolithic, seamless appearance that protects the bricks from erosion while providing the smooth, organic aesthetic characteristic of the region. 
+
+While traditional adobe construction relied solely on earth, water, and straw, modern adobe architecture incorporates structural engineering to meet contemporary safety standards. Modern builders often use reinforced concrete foundations and internal steel rebar to ensure seismic resilience, while the exterior is finished with breathable, weather-resistant sealants to increase durability while maintaining the traditional aesthetic.
 
 ### 3. Natural Beauty and Sustainability 🌱
 
