@@ -5,6 +5,7 @@ import types
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import sys
 
@@ -19,6 +20,7 @@ fake_google.genai = fake_genai
 sys.modules.setdefault("google", fake_google)
 sys.modules.setdefault("google.genai", fake_genai)
 
+import revise_post  # noqa: E402
 from revise_post import (  # noqa: E402
     ReviewRequest,
     apply_revision,
@@ -168,10 +170,11 @@ status: ready
             original_cwd = Path.cwd()
             try:
                 os.chdir(root)
-                changed = apply_revision(review, FakeModel(), SimpleNamespace(
-                    record_attempt=lambda _stage: None,
-                    record_success=lambda _stage, _response: None,
-                ))
+                with patch.object(revise_post, "collect_review_research", return_value=""):
+                    changed = apply_revision(review, FakeModel(), SimpleNamespace(
+                        record_attempt=lambda _stage: None,
+                        record_success=lambda _stage, _response: None,
+                    ))
                 self.assertIn("_posts/ko/post.md", {Path(path).as_posix() for path in changed})
                 self.assertIn("수정된 한국어", ko_path.read_text(encoding="utf-8"))
                 self.assertIn("Revised English", en_path.read_text(encoding="utf-8"))
@@ -198,10 +201,11 @@ status: ready
             original_cwd = Path.cwd()
             try:
                 os.chdir(root)
-                changed = apply_revision(review, model, SimpleNamespace(
-                    record_attempt=lambda _stage: None,
-                    record_success=lambda _stage, _response: None,
-                ))
+                with patch.object(revise_post, "collect_review_research", return_value=""):
+                    changed = apply_revision(review, model, SimpleNamespace(
+                        record_attempt=lambda _stage: None,
+                        record_success=lambda _stage, _response: None,
+                    ))
                 self.assertEqual(2, model.calls)
                 self.assertIn("_posts/en/post.md", {Path(path).as_posix() for path in changed})
                 self.assertIn("Revised English", en_path.read_text(encoding="utf-8"))

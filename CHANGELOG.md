@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.19.8] — 2026-07-17
+
+### Added
+- **Phase 4.1 Review Enrichment**: Added lightweight review-driven research from DuckDuckGo and Wikipedia before applying Obsidian revision notes.
+- **Enrichment Preservation Guardrails**: Added validation that blocks revision responses that overly truncate the original post or remove too many existing level-2 headings.
+
+### Changed
+- **Revision Prompt Strategy**: Reframed Phase 4 from whole-article rewriting toward minimal enrichment that preserves the existing article while adding review-requested context.
+
+---
+
 ## [1.19.7] — 2026-07-17
 
 ### Fixed
