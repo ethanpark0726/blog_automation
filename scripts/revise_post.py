@@ -112,12 +112,27 @@ def discover_ready_reviews(directory: Path = DEFAULT_REVIEW_DIR) -> list[ReviewR
 
 
 def find_posts_by_post_id(post_id: str) -> dict[str, Path]:
+    post_id = post_id.strip()
     matches: dict[str, Path] = {}
+    suffix_candidates: dict[str, dict[str, Path]] = {}
     for path in Path("_posts").glob("*/*.md"):
         metadata, _body = parse_front_matter(path.read_text(encoding="utf-8"))
-        if metadata.get("post_id") == post_id:
-            lang = str(metadata.get("lang") or path.parent.name)
+        current_post_id = str(metadata.get("post_id") or "").strip()
+        lang = str(metadata.get("lang") or path.parent.name)
+        if current_post_id == post_id:
             matches[lang] = path
+        if current_post_id.endswith(f"-{post_id}"):
+            suffix_candidates.setdefault(current_post_id, {})[lang] = path
+    if matches:
+        return matches
+    if len(suffix_candidates) == 1:
+        resolved_post_id, resolved_matches = next(iter(suffix_candidates.items()))
+        print(f"[Revision] Resolved short target_post_id '{post_id}' to '{resolved_post_id}'")
+        return resolved_matches
+    if len(suffix_candidates) > 1:
+        raise ValueError(
+            f"Ambiguous short target_post_id {post_id}; matching post_ids: {sorted(suffix_candidates)}"
+        )
     return matches
 
 

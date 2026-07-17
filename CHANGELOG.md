@@ -6,6 +6,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.19.6] — 2026-07-17
+
+### Fixed
+- **Revision Target Lookup**: Allowed `_reviews/pending` notes to use a unique short `post_id` suffix, such as `0e0dace8`, instead of requiring the full generated post ID.
+
+---
+
 ## [1.19.5] — 2026-07-17
 
 ### Fixed

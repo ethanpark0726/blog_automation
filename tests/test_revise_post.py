@@ -23,6 +23,7 @@ from revise_post import (  # noqa: E402
     ReviewRequest,
     apply_revision,
     discover_ready_reviews,
+    find_posts_by_post_id,
     parse_review_note,
 )
 
@@ -153,6 +154,24 @@ status: ready
                 self.assertTrue((root / "_knowledge" / "concepts" / "topic.md").exists())
             finally:
                 os.chdir(original_cwd)
+
+    def test_find_posts_accepts_unique_post_id_suffix(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            post_id = "adobe-architecture-0e0dace8"
+            (root / "_posts" / "ko").mkdir(parents=True)
+            (root / "_posts" / "en").mkdir(parents=True)
+            (root / "_posts" / "ko" / "post.md").write_text(post("ko", post_id), encoding="utf-8")
+            (root / "_posts" / "en" / "post.md").write_text(post("en", post_id), encoding="utf-8")
+
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                matches = find_posts_by_post_id("0e0dace8")
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertEqual({"ko", "en"}, set(matches))
 
 
 if __name__ == "__main__":
