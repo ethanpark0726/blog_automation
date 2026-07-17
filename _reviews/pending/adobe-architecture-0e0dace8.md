@@ -1,7 +1,7 @@
 ---
 target_post_id: adobe-architecture-0e0dace8
 scope: bilingual
-status: draft
+status: ready
 ---
 
 # Revision Request Example
