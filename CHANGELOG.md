@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.19.0] — 2026-07-17
+
+### Added
+- **Obsidian Review Revision Workflow (Phase 4)**: Added `scripts/revise_post.py` and `.github/workflows/revise.yml` to apply ready `_reviews/pending` notes to paired KO/EN posts.
+- **Revision Tests**: Added parser and paired-post revision coverage for review notes.
+
+### Changed
+- **Review Templates**: Rewrote the review-note template and example in clearer English so generated review requests are easier to validate and automate.
+
+---
+
 ## [1.18.0] — 2026-07-17
 
 ### Added
