@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.16.1-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.16.2-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -239,7 +239,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.16.1** — Hardens model-generated draft/localization stages against missing `json_meta` blocks and documents the `google.genai` migration path before Phase 3.
+**v1.16.2** — Skips GitHub Pages deployment polling on feature branches so branch tests do not wait for a main-only Pages workflow.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -257,6 +257,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.15.1**: Docs-rule Unicode path fix and `.gitattributes` line-ending normalization
 - **`[x]` v1.16.0**: Obsidian folder structure, templates, and editing rules
 - **`[x]` v1.16.1**: Model metadata recovery and Gemini SDK migration plan
+- **`[x]` v1.16.2**: Feature-branch Pages wait skip for GitHub Actions testing
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 
 ---

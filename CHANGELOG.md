@@ -6,6 +6,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.16.2] — 2026-07-17
+
+### Fixed
+- **Feature Branch Pages Wait**: `telegram_trigger.yml` now waits for GitHub Pages deployment only on `main`. Feature-branch runs write a skipped Pages result instead of polling for a `deploy.yml` run that cannot exist because Pages auto-deploy is configured for `main` pushes only.
+
+---
+
 ## [1.16.1] — 2026-07-16
 
 ### Fixed
