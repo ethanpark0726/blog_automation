@@ -13,6 +13,34 @@
 > Never commit directly to the `main` branch. After testing is complete and validated, create a Pull Request (PR) and merge it into `main`.
 > After a feature branch is merged, delete the merged branch from the remote repository immediately.
 
+### Mandatory pre-merge branch audit
+
+Feature branches can receive additional commits from GitHub Actions after manual testing, especially Telegram-generated posts and Obsidian `_knowledge/` notes. Before merging or deleting any feature branch, verify the branch's final remote HEAD and all commits that are not yet in `main`.
+
+Required checks:
+
+```bash
+git fetch origin
+git log --oneline main..origin/<feature-branch>
+git diff --name-only main..origin/<feature-branch>
+```
+
+Do not merge or delete the feature branch until:
+
+1. The log output includes every expected implementation commit and every GitHub Actions generated-post commit.
+2. The diff output includes every expected `_posts/`, `_knowledge/`, workflow, script, test, README, and CHANGELOG change.
+3. If GitHub Actions pushed a generated post to the feature branch, that generated-post commit is included in the merge target.
+4. After merging, `git log --oneline origin/main..origin/<feature-branch>` returns no commits that still need to be preserved.
+
+If a feature branch was deleted too early, recover the missing commit from GitHub Actions logs before continuing:
+
+```bash
+gh run view <run-id> --log
+git fetch origin <missing-commit-sha>
+git merge --ff-only FETCH_HEAD
+git push origin main
+```
+
 ---
 
 ## Versioning (Semantic Versioning)

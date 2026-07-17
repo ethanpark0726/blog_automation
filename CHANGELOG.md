@@ -6,6 +6,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.19.1] — 2026-07-17
+
+### Changed
+- **Pre-Merge Branch Audit Rule**: Added a mandatory final branch audit to `CONTRIBUTING.md` so GitHub Actions generated post commits on feature branches are not missed before merge or branch deletion.
+
+---
+
 ## [1.19.0] — 2026-07-17
 
 ### Added
