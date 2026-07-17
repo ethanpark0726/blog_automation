@@ -98,6 +98,33 @@ status: ready
         self.assertEqual(review.instructions, ["Add one paragraph."])
         self.assertEqual(len(discovered), 1)
 
+    def test_discover_ignores_example_review_notes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            pending = root / "_reviews" / "pending"
+            pending.mkdir(parents=True)
+            (pending / "example-revision-request.md").write_text(
+                """---
+target_post_id: "example"
+scope: bilingual
+status: ready
+---
+
+# Revision
+
+- This is documentation, not an executable request.
+""",
+                encoding="utf-8",
+            )
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                discovered = discover_ready_reviews()
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertEqual([], discovered)
+
     def test_apply_revision_updates_paired_posts(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

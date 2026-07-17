@@ -11,9 +11,7 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable
-
-from google import genai
+from typing import Any, Iterable
 
 from content_quality import ContentValidationError, validate_post
 from gemini_runtime import UsageTracker, call_gemini
@@ -36,7 +34,7 @@ class ReviewRequest:
 
 
 class GeminiModelAdapter:
-    def __init__(self, client: genai.Client, model_name: str) -> None:
+    def __init__(self, client: Any, model_name: str) -> None:
         self.client = client
         self.model_name = model_name
 
@@ -103,9 +101,11 @@ def parse_review_note(path: Path) -> ReviewRequest:
 def discover_ready_reviews(directory: Path = DEFAULT_REVIEW_DIR) -> list[ReviewRequest]:
     reviews = []
     for path in sorted(directory.glob("*.md")):
-        review = parse_review_note(path)
         if path.name.startswith("_"):
             continue
+        if path.name.startswith("example-"):
+            continue
+        review = parse_review_note(path)
         if review.status.casefold() == "ready":
             reviews.append(review)
     return reviews
@@ -228,6 +228,8 @@ def main(argv: Iterable[str] | None = None) -> None:
     if not reviews:
         print("No ready review notes found.")
         return
+
+    from google import genai
 
     client = genai.Client(api_key=api_key)
     model = GeminiModelAdapter(client, GEMINI_MODEL)

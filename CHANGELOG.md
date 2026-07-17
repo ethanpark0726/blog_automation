@@ -6,6 +6,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.19.4] — 2026-07-17
+
+### Fixed
+- **Revision Example Safety**: Changed the pending example review note to `draft` and taught the revision workflow to ignore `example-*.md` files so sample notes cannot break production runs.
+
+---
+
 ## [1.19.3] — 2026-07-17
 
 ### Changed
