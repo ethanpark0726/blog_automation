@@ -2,9 +2,9 @@
 
 [![GitHub Actions](https://img.shields.io/github/actions/workflow/status/ethanpark0726/blog_automation/telegram_trigger.yml?label=Blog%20Pipeline&logo=github)](https://github.com/ethanpark0726/blog_automation/actions)
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
-[![Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-blue?logo=google)](https://ai.google.dev)
+[![Gemini](https://img.shields.io/badge/Gemini-3.1%20Flash--Lite-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.17.0-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.18.0-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -224,7 +224,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 | `TELEGRAM_BOT_TOKEN` | Secret | Telegram bot token | (Required) |
 | `TELEGRAM_CHAT_ID` | Secret/Var | Chat ID for completion notifications | (Optional) |
 | `GH_PAT` | Secret | Personal Access Token for Git push | (Required) |
-| `GEMINI_MODEL` | Secret/Var | Gemini model to run the pipeline (e.g. `gemini-2.5-pro`) | `gemini-2.5-flash` |
+| `GEMINI_MODEL` | Secret/Var | Gemini model to run the pipeline (e.g. `gemini-3.1-flash-lite`) | `gemini-3.1-flash-lite` |
 
 ### Cloudflare Worker Variables
 
@@ -239,7 +239,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.17.0** — Migrates Gemini calls from the deprecated `google.generativeai` package to the GA `google-genai` SDK while preserving usage tracking and quota-aware retries.
+**v1.18.0** — Switches the default Gemini model to `gemini-3.1-flash-lite` and generates Obsidian knowledge notes from each new paired blog post.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -259,6 +259,8 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.16.1**: Model metadata recovery and Gemini SDK migration plan
 - **`[x]` v1.16.2**: Feature-branch Pages wait skip for GitHub Actions testing
 - **`[x]` v1.17.0**: Phase 2.5 Gemini SDK migration to `google-genai`
+- **`[x]` v1.18.0**: Phase 3 Obsidian knowledge-note generation and Gemini 3.1 Flash-Lite default
+- **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 
 ---

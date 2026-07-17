@@ -162,6 +162,7 @@ class PipelineIntegrationTests(unittest.TestCase):
                 )
                 ko_files = list((temp_path / "_posts" / "ko").glob("*.md"))
                 en_files = list((temp_path / "_posts" / "en").glob("*.md"))
+                knowledge_files = list((temp_path / "_knowledge" / "concepts").glob("*.md"))
                 ko_content = ko_files[0].read_text(encoding="utf-8")
             finally:
                 os.chdir(original_cwd)
@@ -179,6 +180,7 @@ class PipelineIntegrationTests(unittest.TestCase):
         )
         self.assertEqual(len(ko_files), 1)
         self.assertEqual(len(en_files), 1)
+        self.assertGreaterEqual(len(knowledge_files), 1)
         self.assertIn("request_fingerprint:", ko_content)
         self.assertIn(
             "formation of the solar system",

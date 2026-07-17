@@ -42,13 +42,14 @@ from gemini_runtime import (
     reset_pipeline_result,
     write_pipeline_result,
 )
+from generate_knowledge_notes import generate_knowledge_notes
 
 # ── Load environment variables ──────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 QUERY_INPUT = os.environ.get("QUERY_INPUT", "")
 CHAT_ID = os.environ.get("CHAT_ID", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "").strip() or "gemini-2.5-flash"
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "").strip() or "gemini-3.1-flash-lite"
 
 if not GEMINI_API_KEY:
     print("❌ ERROR: GEMINI_API_KEY environment variable is not set.")
@@ -881,6 +882,8 @@ def main():
         # ─── Step 5: Save files ──────────────────────────────────────
         file_writer = FileWriterAgent()
         created_files = file_writer.run(final_posts, classification, fingerprint)
+        knowledge_files = generate_knowledge_notes(created_files)
+        created_files.extend(knowledge_files)
         
         print("\n" + "=" * 60)
         print("✅ All agent pipeline steps complete!")

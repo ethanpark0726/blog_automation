@@ -65,4 +65,5 @@ exclude:
   - _templates/
   - OBSIDIAN_IMPLEMENTATION_PLAN.md
   - OBSIDIAN_INTEGRATION_CHECKLIST.md
+  - OBSIDIAN_PHASE2_STABILIZATION_PLAN.md
   - tistory_sync_plan.md

@@ -59,7 +59,7 @@ jobs:
           QUERY_INPUT: ${{ github.event.inputs.query_input }}
           CHAT_ID: ${{ github.event.inputs.chat_id }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || secrets.GEMINI_MODEL }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || secrets.GEMINI_MODEL || 'gemini-3.1-flash-lite' }}
         run: |
           python scripts/multi_agent.py
 
@@ -72,7 +72,7 @@ jobs:
       # ── 6. Check Changes and Commit ───────────────────────────
       - name: 📝 Commit New Posts
         run: |
-          git add _posts/
+          git add _posts/ _knowledge/
           if git diff --staged --quiet; then
             echo "No new files to commit."
           else

@@ -6,6 +6,25 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.18.0] — 2026-07-17
+
+### Added
+- **Obsidian Knowledge Notes (Phase 3)**: Added deterministic knowledge-note generation for each newly created paired blog post. The pipeline now writes topic, concept, and source notes under `_knowledge/` without spending another Gemini call.
+- **Knowledge Note Tests**: Added coverage for topic/concept/source note generation and full pipeline integration.
+- **Merged Branch Cleanup Rule**: Added a contribution rule requiring merged feature branches to be deleted from the remote repository immediately.
+
+### Changed
+- **Default Gemini Model**: Changed the default model from `gemini-2.5-flash` to `gemini-3.1-flash-lite`, matching the higher-quota model available in the current Google API dashboard.
+- **Workflow Commit Scope**: `telegram_trigger.yml` now commits `_knowledge/` together with `_posts/` so Obsidian notes are persisted after generation.
+
+### Removed
+- **Private Stabilization Note**: Removed `OBSIDIAN_PHASE2_STABILIZATION_PLAN.md` from the public repository and added it to `.gitignore`.
+
+### Roadmap
+- **Model Fallback Pool**: Keep multi-model fallback as an outstanding item rather than implementing it now.
+
+---
+
 ## [1.17.0] — 2026-07-17
 
 ### Changed

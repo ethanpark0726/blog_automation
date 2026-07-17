@@ -11,6 +11,7 @@
 
 > **New features and fixes MUST be developed in a separate feature branch.**  
 > Never commit directly to the `main` branch. After testing is complete and validated, create a Pull Request (PR) and merge it into `main`.
+> After a feature branch is merged, delete the merged branch from the remote repository immediately.
 
 ---
 
