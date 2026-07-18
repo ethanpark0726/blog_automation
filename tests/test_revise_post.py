@@ -24,6 +24,7 @@ import revise_post  # noqa: E402
 from revise_post import (  # noqa: E402
     ReviewRequest,
     apply_revision,
+    complete_review,
     discover_ready_reviews,
     find_posts_by_post_id,
     parse_review_note,
@@ -229,6 +230,54 @@ status: ready
                 os.chdir(original_cwd)
 
         self.assertEqual({"ko", "en"}, set(matches))
+
+    def test_complete_review_records_audit_summary(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            pending = root / "_reviews" / "pending"
+            pending.mkdir(parents=True)
+            review_path = pending / "request.md"
+            review_path.write_text(
+                """---
+target_post_id: "paired-123"
+scope: bilingual
+status: ready
+---
+
+# Revision
+
+- Add concrete evidence.
+""",
+                encoding="utf-8",
+            )
+            review = ReviewRequest(
+                path=review_path,
+                target_post_id="paired-123",
+                instructions=["Add concrete evidence."],
+            )
+
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                completed_path = complete_review(
+                    review,
+                    ["_posts/ko/post.md", "_posts/en/post.md", "_knowledge/topics/topic.md"],
+                )
+                completed_full_path = root / completed_path
+                pending_exists = review_path.exists()
+                completed_exists = completed_full_path.exists()
+                completed_text = completed_full_path.read_text(encoding="utf-8")
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertFalse(pending_exists)
+        self.assertTrue(completed_exists)
+        self.assertIn("status: completed", completed_text)
+        self.assertIn("completed_at:", completed_text)
+        self.assertIn("## Completion Summary", completed_text)
+        self.assertIn("`_posts/ko/post.md`", completed_text)
+        self.assertIn("`_posts/en/post.md`", completed_text)
+        self.assertIn("`_knowledge/topics/topic.md`", completed_text)
 
 
 if __name__ == "__main__":
