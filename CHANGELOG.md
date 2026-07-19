@@ -6,6 +6,18 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.20.0] — 2026-07-19
+
+### Added
+- **Telegram Revision Commands**: Added `/reviews` and `/revise` Cloudflare Worker commands so Obsidian review revisions can be triggered from Telegram.
+- **Revision Workflow Inputs**: Added optional `chat_id` and `review_filter` inputs to the Obsidian revision workflow, supporting `/revise`, `/revise latest`, and filtered revision runs.
+- **Revision Result Notifications**: Added Telegram success/failure notifications for Obsidian revision workflow runs.
+
+### Changed
+- **Operations Status**: Telegram `/status` now includes the latest Obsidian revision workflow run alongside generation and Pages deployment.
+
+---
+
 ## [1.19.9] — 2026-07-17
 
 ### Added

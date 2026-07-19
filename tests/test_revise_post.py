@@ -26,6 +26,7 @@ from revise_post import (  # noqa: E402
     apply_revision,
     complete_review,
     discover_ready_reviews,
+    filter_reviews,
     find_posts_by_post_id,
     parse_review_note,
 )
@@ -230,6 +231,25 @@ status: ready
                 os.chdir(original_cwd)
 
         self.assertEqual({"ko", "en"}, set(matches))
+
+    def test_filter_reviews_accepts_latest_and_partial_identifiers(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            old_path = root / "old-review.md"
+            new_path = root / "new-review.md"
+            old_path.write_text("", encoding="utf-8")
+            new_path.write_text("", encoding="utf-8")
+            os.utime(old_path, (100, 100))
+            os.utime(new_path, (200, 200))
+            reviews = [
+                ReviewRequest(path=old_path, target_post_id="turquoise-abc123"),
+                ReviewRequest(path=new_path, target_post_id="adobe-architecture-0e0dace8"),
+            ]
+
+            self.assertEqual([new_path], [review.path for review in filter_reviews(reviews, "latest")])
+            self.assertEqual([new_path], [review.path for review in filter_reviews(reviews, "0e0dace8")])
+            self.assertEqual([old_path], [review.path for review in filter_reviews(reviews, "old")])
+            self.assertEqual(reviews, filter_reviews(reviews, ""))
 
     def test_complete_review_records_audit_summary(self):
         with tempfile.TemporaryDirectory() as temp_dir:

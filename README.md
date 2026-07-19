@@ -67,8 +67,10 @@ blog_automation/
 │   ├── content_quality.py     # Local classification, references, and validation
 │   ├── gemini_runtime.py      # Gemini usage tracking, retry, and error classification
 │   ├── notify.py              # Telegram completion notification
+│   ├── notify_revision.py     # Telegram Obsidian revision notification
 │   ├── pages_status.py        # Waits for the exact post commit's Pages deployment
 │   ├── operations_summary.py  # GitHub Actions usage and quality dashboard
+│   ├── revise_post.py         # Applies Obsidian review notes to existing posts
 │   ├── fix_mermaid.py         # Mermaid node label auto-fix utility
 │   └── requirements.txt       # Python dependencies
 │
@@ -148,6 +150,23 @@ What is Kubernetes?
 ```
 
 In ~2–4 minutes, KO + EN posts will appear on your GitHub Pages blog! 🎉
+
+### Telegram Obsidian Revision Commands
+
+After writing a ready review note in `_reviews/pending`, deploy the latest `cloudflare-worker/worker.js` and use:
+
+```
+/reviews
+/revise
+/revise latest
+/revise <post_id or review filename fragment>
+```
+
+- `/reviews` lists pending review notes.
+- `/revise` runs the Obsidian revision workflow for all ready review notes.
+- `/revise latest` runs only the newest ready review note.
+- `/revise <...>` filters by `target_post_id`, short `post_id` suffix, or review filename fragment.
+- The GitHub Actions workflow sends a Telegram success/failure notification after completion.
 
 ---
 
@@ -239,7 +258,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.19.9** — Adds completion audit records for Obsidian review revisions and aligns regeneration model configuration.
+**v1.20.0** — Adds Telegram commands for running and monitoring Obsidian review revisions.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -270,6 +289,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.19.7**: Full-body repair retry for shortened Phase 4 revision responses
 - **`[x]` v1.19.8**: Phase 4.1 review-driven research and minimal-enrichment guardrails
 - **`[x]` v1.19.9**: Completed review audit summaries and explicit regeneration model configuration
+- **`[x]` v1.20.0**: Telegram `/reviews` and `/revise` commands for Obsidian revision workflows
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 
