@@ -1,0 +1,16 @@
+---
+type: concept
+concept_id: "biology"
+aliases:
+  - "biology"
+tags:
+  - concept
+---
+
+# biology
+
+## Description
+Concept note generated from [[the-effect-of-carrots-on-human-vision|The Carrot Myth: Separating Fact from Wartime Fiction]].
+
+## Related Topics
+- [[the-effect-of-carrots-on-human-vision|The Carrot Myth: Separating Fact from Wartime Fiction]]
