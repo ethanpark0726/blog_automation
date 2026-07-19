@@ -116,6 +116,27 @@ def discover_ready_reviews(directory: Path = DEFAULT_REVIEW_DIR) -> list[ReviewR
     return reviews
 
 
+def filter_reviews(reviews: list[ReviewRequest], filter_text: str | None) -> list[ReviewRequest]:
+    value = (filter_text or "").strip().lower()
+    if not value:
+        return reviews
+
+    if value == "latest":
+        if not reviews:
+            return []
+        return [max(reviews, key=lambda review: review.path.stat().st_mtime)]
+
+    def matches(review: ReviewRequest) -> bool:
+        haystacks = [
+            review.target_post_id.lower(),
+            review.path.name.lower(),
+            review.path.stem.lower(),
+        ]
+        return any(value in haystack for haystack in haystacks)
+
+    return [review for review in reviews if matches(review)]
+
+
 def find_posts_by_post_id(post_id: str) -> dict[str, Path]:
     post_id = post_id.strip()
     matches: dict[str, Path] = {}
@@ -542,9 +563,13 @@ def main(argv: Iterable[str] | None = None) -> None:
     if not api_key:
         raise SystemExit("GEMINI_API_KEY is required")
 
-    reviews = discover_ready_reviews()
+    review_filter = os.environ.get("REVIEW_FILTER", "").strip()
+    reviews = filter_reviews(discover_ready_reviews(), review_filter)
     if not reviews:
-        print("No ready review notes found.")
+        if review_filter:
+            print(f"No ready review notes matched filter: {review_filter}")
+        else:
+            print("No ready review notes found.")
         return
 
     from google import genai

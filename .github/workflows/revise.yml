@@ -2,6 +2,15 @@ name: 🧠 Obsidian Review Revision
 
 on:
   workflow_dispatch:
+    inputs:
+      chat_id:
+        description: "Telegram chat ID for revision result notifications"
+        required: false
+        default: ""
+      review_filter:
+        description: "Optional review filter: latest, post_id, or review filename fragment"
+        required: false
+        default: ""
 
 jobs:
   revise:
@@ -33,9 +42,11 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL || secrets.GEMINI_MODEL || 'gemini-3.1-flash-lite' }}
+          REVIEW_FILTER: ${{ inputs.review_filter }}
         run: python scripts/revise_post.py
 
       - name: Commit Revision Changes
+        if: ${{ success() }}
         run: |
           git config --global user.email "blog-bot@github-actions.com"
           git config --global user.name "Blog Automation Bot"
@@ -46,3 +57,14 @@ jobs:
             git commit -m "feat: apply Obsidian review revisions"
             git push origin HEAD
           fi
+
+      - name: Notify Telegram Revision Result
+        if: ${{ always() && inputs.chat_id != '' }}
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ inputs.chat_id }}
+          WORKFLOW_STATUS: ${{ job.status }}
+          REVIEW_FILTER: ${{ inputs.review_filter }}
+          REVISION_CHANGED_FILES: ${{ env.REVISION_CHANGED_FILES }}
+          GITHUB_RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: python scripts/notify_revision.py
