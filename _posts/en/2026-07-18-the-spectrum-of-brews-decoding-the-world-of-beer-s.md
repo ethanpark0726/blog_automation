@@ -26,7 +26,7 @@ Beer is one of the most widely consumed alcoholic beverages in human history. To
 At the highest level of classification, most beers fall into two primary categories based on the yeast strain used and the temperature at which they ferment. Top-fermentation refers to ale yeast that works at the top of the tank, while bottom-fermentation refers to lager yeast that settles at the bottom during the process.
 
 ### 1. Lagers (The "Cool" Fermenters)
-Lagers are defined by a process of cool fermentation followed by maturation in cold storage, a phase known as "lagering." The German word "Lager" literally means storeroom or warehouse. These beers typically use yeast strains that thrive in cooler temperatures. Because the yeast is less active at these temperatures, the fermentation is slower, resulting in a clean, refined character.
+Lagers are defined by a process of cool fermentation followed by maturation in cold storage, a phase known as "lagering." The German word "Lager" literally means storeroom or warehouse. Lagering is not just about storing beer in a barrel; it is a precise maturation process where the beer is kept at cold temperatures for an extended period to allow yeast and impurities to settle, resulting in a clean, refined character. These beers typically use yeast strains that thrive in cooler temperatures.
 *   **Characteristics:** Generally crisp, clean, and refreshing. The lower fermentation temperature results in fewer esters, allowing the malt and hops to shine without interference.
 *   **Examples:** Pilsner, Helles, Bock. "Bock" is a traditional strong German lager style, and Shiner Bock is a well-known example that brings this style to a wider audience.
 
@@ -41,9 +41,12 @@ Ales are typically made with yeast strains that prefer warmer temperatures. This
 The IPA is a cornerstone of the modern craft beer movement. While often associated with the British colonial trade, the term "India" does not necessarily mean the beer originated in India; rather, it refers to the historical practice of adding extra hops to beers destined for the long sea voyage to India to prevent spoilage. It is important to note that the correct term is **India Pale Ale**.
 *   **Flavor Profile:** Dominantly bitter, citrusy, piney, or tropical, depending on the hop variety.
 
-### Stout
-Stouts are dark, opaque ales known for their roasted malt character. They are historically linked to the "Porter" style. Porters were dark beers originating in 18th-century London, and "Stout" was originally used to describe a stronger, more robust version of a porter (a "Stout Porter"). Over time, they evolved into distinct styles with their own unique characteristics.
-*   **Flavor Profile:** Notes of coffee, chocolate, and roasted grain.
+### Stout and Dunkel
+Stouts are dark, opaque ales known for their roasted malt character. They are historically linked to the "Porter" style. In contrast, "Dunkel" is a German term meaning "dark," referring to a specific lager style. While a Stout offers intense coffee and chocolate notes from roasted barley, a Dunkel uses dark malts to provide a smoother, bready, and nutty profile characteristic of a clean-finishing lager.
+*   **Flavor Profile:** Stouts feature coffee and roasted grain notes, while Dunkels are known for their smooth, toasted malt character.
+
+### Hefeweizen
+Hefeweizen is the quintessential German wheat beer. "Hefe" means yeast, and "Weizen" means wheat. Because it is unfiltered, the yeast remains in the beer, giving it a cloudy appearance and a signature flavor profile defined by notes of banana and clove.
 
 ### Light Lager and Michelob Ultra
 Beers like Michelob Ultra are marketed as "Light Lagers." In this context, "light" refers not just to a lower alcohol content, but specifically to reduced calories and carbohydrates. While a standard beer might contain around 150 calories per 12 oz serving, Michelob Ultra is produced by ensuring the yeast consumes almost all available sugars during fermentation, resulting in a significantly lower calorie count.
@@ -55,7 +58,7 @@ Beers like Michelob Ultra are marketed as "Light Lagers." In this context, "ligh
 | **Lager** | Bottom | Clean, crisp, bready | Light Straw to Gold |
 | **IPA** | Top | Hoppy, bitter, citrus | Gold to Copper |
 | **Stout** | Top | Coffee, chocolate, roasted | Deep Brown to Black |
-| **Wheat** | Top | Banana, clove, bready | Pale to Cloudy |
+| **Hefeweizen** | Top | Banana, clove, bready | Pale to Cloudy |
 
 ## The Technical Lifecycle of a Brew
 
