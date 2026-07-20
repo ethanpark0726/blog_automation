@@ -6,6 +6,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.20.2] — 2026-07-20
+
+### Added
+- **Agent Domain Glossary**: Added `CONTEXT.md` so installed engineering skills share the same project language for blog generation, post pairs, Obsidian review notes, knowledge notes, and workflow concepts.
+
+---
+
 ## [1.20.1] — 2026-07-19
 
 ### Added

@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-3.1%20Flash--Lite-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.20.1-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.20.2-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -97,6 +97,7 @@ blog_automation/
 ├── trivia.md                  # Trivia Vault category page
 ├── engineer.md                # Engineer category page
 ├── CHANGELOG.md               # Version history
+├── CONTEXT.md                 # Domain language used by agent skills
 ├── CONTRIBUTING.md            # Contribution rules
 └── .gitignore
 ```
@@ -258,7 +259,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.20.1** — Adds CI validation so README version badge, current version, roadmap, and CHANGELOG stay synchronized.
+**v1.20.2** — Adds a project domain glossary for installed agent skills.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -291,6 +292,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.19.9**: Completed review audit summaries and explicit regeneration model configuration
 - **`[x]` v1.20.0**: Telegram `/reviews` and `/revise` commands for Obsidian revision workflows
 - **`[x]` v1.20.1**: README version metadata consistency guard in CI
+- **`[x]` v1.20.2**: Project domain glossary for installed agent skills
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 
