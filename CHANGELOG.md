@@ -6,6 +6,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.20.3] — 2026-07-20
+
+### Added
+- **Project-Scoped Agent Skills**: Added `.agents/` and `skills-lock.json` so the installed engineering skills are reproducible across local checkouts and future agent sessions.
+
+---
+
 ## [1.20.2] — 2026-07-20
 
 ### Added
