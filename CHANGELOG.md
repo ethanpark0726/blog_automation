@@ -6,6 +6,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.20.1] — 2026-07-19
+
+### Added
+- **README Version Metadata Guard**: Added a CI validation script that fails when the README version badge, Current Version section, Roadmap entry, and latest CHANGELOG version drift apart.
+
+### Fixed
+- **README Version Badge**: Updated the stale README version badge so it matches the current release metadata.
+
+---
+
 ## [1.20.0] — 2026-07-19
 
 ### Added

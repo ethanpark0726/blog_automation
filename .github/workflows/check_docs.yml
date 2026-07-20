@@ -102,3 +102,6 @@ jobs:
 
           echo ""
           echo "🎉 All documentation update rules have been followed!"
+
+      - name: 🏷️ Validate README Version Metadata
+        run: python scripts/check_version_metadata.py

@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-3.1%20Flash--Lite-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.19.8-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.20.1-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -168,6 +168,10 @@ After writing a ready review note in `_reviews/pending`, deploy the latest `clou
 - `/revise <...>` filters by `target_post_id`, short `post_id` suffix, or review filename fragment.
 - The GitHub Actions workflow sends a Telegram success/failure notification after completion.
 
+### AI Engineering Workflow Roadmap
+
+The planned integration path for `mattpocock/skills` and `ponytail` is tracked in [SKILLS_PONYTAIL_ROADMAP.md](SKILLS_PONYTAIL_ROADMAP.md). This is intentionally a roadmap first: install and enforcement decisions should be confirmed before adding new agent rules to the repository.
+
 ---
 
 ## ⚙️ Agent Pipeline Details
@@ -258,7 +262,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.20.0** — Adds Telegram commands for running and monitoring Obsidian review revisions.
+**v1.20.1** — Adds CI validation so README version badge, current version, roadmap, and CHANGELOG stay synchronized.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -290,6 +294,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.19.8**: Phase 4.1 review-driven research and minimal-enrichment guardrails
 - **`[x]` v1.19.9**: Completed review audit summaries and explicit regeneration model configuration
 - **`[x]` v1.20.0**: Telegram `/reviews` and `/revise` commands for Obsidian revision workflows
+- **`[x]` v1.20.1**: README version metadata consistency guard in CI
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 
