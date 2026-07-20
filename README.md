@@ -168,10 +168,6 @@ After writing a ready review note in `_reviews/pending`, deploy the latest `clou
 - `/revise <...>` filters by `target_post_id`, short `post_id` suffix, or review filename fragment.
 - The GitHub Actions workflow sends a Telegram success/failure notification after completion.
 
-### AI Engineering Workflow Roadmap
-
-The planned integration path for `mattpocock/skills` and `ponytail` is tracked in [SKILLS_PONYTAIL_ROADMAP.md](SKILLS_PONYTAIL_ROADMAP.md). This is intentionally a roadmap first: install and enforcement decisions should be confirmed before adding new agent rules to the repository.
-
 ---
 
 ## ⚙️ Agent Pipeline Details
