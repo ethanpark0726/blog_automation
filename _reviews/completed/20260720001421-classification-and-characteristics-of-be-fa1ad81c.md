@@ -1,7 +1,8 @@
 ---
 target_post_id: classification-and-characteristics-of-be-fa1ad81c
 scope: bilingual
-status: ready
+status: completed
+completed_at: "2026-07-20T00:14:21.602433+00:00"
 ---
 
 # Revision Request Example
@@ -12,3 +13,12 @@ status: ready
 - 상면발효랑 하면 발효라는게 무슨 의미인지 보다 구체적인 설명 필요
 - 양조의 기술적인 측면에 관심이 있는 분들을 위해, 발효 논리를 단순화한 의사 코드(pseudocode)를 소개하는 섹션 및 코드삭제
 - michelob ultra이라고 하는 맥주의 특징은 Light Lager라고 광고하고 있다. Light Larger는 무슨 뜻인가? 맥주의 도수가 낮은 것을 의미하는 것인가? 그리고 일반적인 맥주의 칼로리는 몇 정도 되며 michelob ultra는 어떻게 이렇게 낮은 칼로리로 생산될 수 있는지에 대한 설명을 덧붙일 것.
+
+
+## Completion Summary
+
+- Completed at: `2026-07-20T00:14:21.602433+00:00`
+- Updated files:
+  - `_posts/en/2026-07-18-the-spectrum-of-brews-decoding-the-world-of-beer-s.md`
+  - `_posts/ko/2026-07-18-맥주의-세계-맥주-스타일의-모든-것.md`
+  - `_knowledge/concepts/classification-and-characteristics-of-be.md`
