@@ -70,6 +70,16 @@ Link: https://en.wikipedia.org/wiki/Kubernetes
         self.assertEqual(references[0]["title"], "Kubernetes")
         self.assertEqual(references[1]["url"], "https://arxiv.org/abs/1234.5678")
 
+    def test_extract_references_limits_single_domain_dominance(self):
+        facts = "\n\n".join(
+            f"[Wikipedia] Title: Source {index}\nLink: https://en.wikipedia.org/wiki/Source_{index}"
+            for index in range(8)
+        )
+
+        references = extract_references(facts)
+
+        self.assertEqual(4, len(references))
+
     def test_source_quality_score_rewards_independent_authoritative_sources(self):
         facts = """
 [Wikipedia] Title: Kubernetes
