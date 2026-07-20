@@ -145,6 +145,12 @@ class PipelineIntegrationTests(unittest.TestCase):
             "Author(s): Example Author\n"
             "Link: https://books.google.com/books?id=solar-system"
         )
+        pipeline.search_crossref = lambda _query: (
+            "[Scholarly Publication] Title: Solar System Formation Evidence\n"
+            "Author(s): Example Researcher\n"
+            "Abstract: Independent scholarly evidence.\n"
+            "DOI Link: https://doi.org/10.1234/solar-system"
+        )
 
         original_cwd = Path.cwd()
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -176,7 +182,7 @@ class PipelineIntegrationTests(unittest.TestCase):
         self.assertEqual(result["usage"]["api_attempts"], 3)
         self.assertGreaterEqual(
             result["metrics"]["source_quality"]["score"],
-            75,
+            90,
         )
         self.assertEqual(len(ko_files), 1)
         self.assertEqual(len(en_files), 1)

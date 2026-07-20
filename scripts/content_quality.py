@@ -244,10 +244,15 @@ def classify_query(query: str) -> dict:
     }
 
 
-def extract_references(facts: str, limit: int = 12) -> list[dict[str, str]]:
+def extract_references(
+    facts: str,
+    limit: int = 12,
+    per_domain_limit: int = 4,
+) -> list[dict[str, str]]:
     """Extract source titles and URLs from normalized search output."""
     references: list[dict[str, str]] = []
     seen_urls = set()
+    domain_counts: dict[str, int] = {}
     current_title = "Source"
 
     for raw_line in facts.splitlines():
@@ -263,7 +268,12 @@ def extract_references(facts: str, limit: int = 12) -> list[dict[str, str]]:
         url = link_match.group(1).rstrip(".,;)")
         if url in seen_urls:
             continue
+        domain = urlparse(url).netloc.lower().removeprefix("www.")
+        if domain and domain_counts.get(domain, 0) >= per_domain_limit:
+            continue
         seen_urls.add(url)
+        if domain:
+            domain_counts[domain] = domain_counts.get(domain, 0) + 1
         safe_title = current_title.replace("[", "").replace("]", "")
         references.append({"title": safe_title, "url": url})
         if len(references) == limit:

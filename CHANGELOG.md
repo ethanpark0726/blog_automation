@@ -6,6 +6,14 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.20.4] — 2026-07-20
+
+### Changed
+- **Trivia Source Diversity**: Trivia-mode research now reuses Crossref alongside DuckDuckGo, Wikipedia, and Google Books to increase independent-domain coverage without adding another dependency or API key.
+- **Reference Extraction**: Reference extraction now caps one domain at four references so a single source such as Wikipedia cannot dominate all displayed references and source-quality scoring.
+
+---
+
 ## [1.20.3] — 2026-07-20
 
 ### Added

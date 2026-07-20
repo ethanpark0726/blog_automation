@@ -472,6 +472,7 @@ class ScholarlySearchAgent:
         primary_query = plan.get("search_queries_en", [queries[0]])[0]
         if mode == "trivia":
             add_result("Book References (Google Books)", search_google_books(primary_query))
+            add_result("Scholarly Publications (Crossref)", search_crossref(primary_query))
         else:
             # Engineer mode: arXiv, Crossref, and standards/vendor references.
             add_result("Academic Literature (arXiv)", search_arxiv(primary_query))

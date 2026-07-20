@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-3.1%20Flash--Lite-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.20.3-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.20.4-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -232,6 +232,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 ### Operations, Source Quality, and Pages Completion
 
 - Source quality is scored locally from `0-100` using reference count, independent-domain diversity, evidence volume, and authoritative domains. This costs no Gemini request.
+- Trivia research now uses Crossref in addition to DuckDuckGo, Wikipedia, and Google Books, while reference extraction caps one-domain dominance.
 - Every run publishes a GitHub Actions job summary with pipeline status, Pages status, total tokens, per-stage token usage, and source quality.
 - The generation workflow waits for the `deploy.yml` run associated with the exact generated-post commit. Telegram therefore distinguishes Pages success, failure, timeout, and monitor errors.
 - Telegram `/status` reports the latest generation and Pages workflow states; `/help` lists supported commands. Deploy `cloudflare-worker/worker.js` again for these command changes to become active.
@@ -263,7 +264,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.20.3** — Commits project-scoped engineering skills and their lockfile for reproducible agent workflows.
+**v1.20.4** — Improves source diversity scoring by reusing Crossref for trivia research and limiting single-domain reference dominance.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -298,6 +299,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.20.1**: README version metadata consistency guard in CI
 - **`[x]` v1.20.2**: Project domain glossary for installed agent skills
 - **`[x]` v1.20.3**: Project-scoped engineering skills and lockfile committed for reproducible agent workflows
+- **`[x]` v1.20.4**: Trivia source diversity improvement with Crossref and per-domain reference caps
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 
