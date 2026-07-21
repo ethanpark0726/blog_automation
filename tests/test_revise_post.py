@@ -99,6 +99,29 @@ class ShortThenFullModel:
         )
 
 
+class AlwaysShortModel:
+    def __init__(self):
+        self.calls = 0
+
+    def generate_content(self, _prompt, generation_config=None):
+        del generation_config
+        self.calls += 1
+        return SimpleNamespace(
+            text=json.dumps(
+                {
+                    "ko": "짧은 보강 내용입니다.",
+                    "en": "Short additional note.",
+                },
+                ensure_ascii=False,
+            ),
+            usage_metadata=SimpleNamespace(
+                prompt_token_count=10,
+                candidates_token_count=20,
+                total_token_count=30,
+            ),
+        )
+
+
 class RevisePostTests(unittest.TestCase):
     def test_parse_and_discover_ready_review(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -244,6 +267,39 @@ status: ready
                 self.assertEqual(2, model.calls)
                 self.assertIn("_posts/en/post.md", {Path(path).as_posix() for path in changed})
                 self.assertIn("Revised English", en_path.read_text(encoding="utf-8"))
+            finally:
+                os.chdir(original_cwd)
+
+    def test_apply_revision_falls_back_to_append_only_enrichment(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            post_id = "paired-123"
+            (root / "_posts" / "ko").mkdir(parents=True)
+            (root / "_posts" / "en").mkdir(parents=True)
+            ko_path = root / "_posts" / "ko" / "post.md"
+            en_path = root / "_posts" / "en" / "post.md"
+            ko_path.write_text(post("ko", post_id), encoding="utf-8")
+            en_path.write_text(post("en", post_id), encoding="utf-8")
+            review = ReviewRequest(
+                path=root / "_reviews" / "pending" / "request.md",
+                target_post_id=post_id,
+                instructions=["Add one paragraph."],
+            )
+            model = AlwaysShortModel()
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                with patch.object(revise_post, "collect_review_research", return_value=""):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        changed = apply_revision(review, model, SimpleNamespace(
+                            record_attempt=lambda _stage: None,
+                            record_success=lambda _stage, _response: None,
+                        ))
+                self.assertEqual(2, model.calls)
+                self.assertIn("_posts/ko/post.md", {Path(path).as_posix() for path in changed})
+                self.assertIn("## Additional Review Notes", en_path.read_text(encoding="utf-8"))
+                self.assertIn("Short additional note.", en_path.read_text(encoding="utf-8"))
+                self.assertIn("## 추가 보강", ko_path.read_text(encoding="utf-8"))
             finally:
                 os.chdir(original_cwd)
 
