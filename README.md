@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-3.1%20Flash--Lite-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.20.5-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.20.6-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -265,7 +265,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.20.5** — Deletes successfully processed Obsidian review notes instead of archiving completed logs.
+**v1.20.6** — Fixes source coverage tests to mock Crossref after trivia research began using it.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -302,6 +302,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.20.3**: Project-scoped engineering skills and lockfile committed for reproducible agent workflows
 - **`[x]` v1.20.4**: Trivia source diversity improvement with Crossref and per-domain reference caps
 - **`[x]` v1.20.5**: Delete processed Obsidian review notes instead of archiving completed logs
+- **`[x]` v1.20.6**: Crossref mock added to source coverage regression test
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 

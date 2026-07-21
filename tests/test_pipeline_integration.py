@@ -198,6 +198,7 @@ class PipelineIntegrationTests(unittest.TestCase):
         pipeline.search_duckduckgo = lambda _query: "No search results"
         pipeline.search_wikipedia = lambda _query: "No Wikipedia pages found."
         pipeline.search_google_books = lambda _query: "No books found."
+        pipeline.search_crossref = lambda _query: "No publications found."
 
         with self.assertRaises(pipeline.SourceCoverageError):
             pipeline.ScholarlySearchAgent().run(
