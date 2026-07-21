@@ -28,9 +28,9 @@ _Avoid_: feedback file, edit request
 A review note that has been marked as ready for automated processing.
 _Avoid_: pending task
 
-**Completed Review Note**:
-A review note that has already been processed by the revision workflow.
-_Avoid_: archived request
+**Processed Review Note**:
+A review note that has been successfully applied and then deleted from the repository.
+_Avoid_: completed note, archived request
 
 **Knowledge Note**:
 An Obsidian-oriented note that connects posts, concepts, and sources for graph-based knowledge exploration.
@@ -59,4 +59,3 @@ _Avoid_: docs, config
 **Version Metadata**:
 The public release metadata that must stay synchronized across the README version badge, README current version, README roadmap, and latest changelog entry.
 _Avoid_: version text, badge only
-

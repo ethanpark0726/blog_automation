@@ -6,6 +6,17 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.20.5] — 2026-07-20
+
+### Changed
+- **Review Note Retention**: Successfully processed Obsidian review notes are now deleted instead of moved to `_reviews/completed`.
+- **Revision Notifications**: Revision change summaries now include the deleted pending review note path instead of an archived completed-note path.
+
+### Removed
+- **Completed Review Archive**: Removed tracked `_reviews/completed` files because Git history already records successful revisions.
+
+---
+
 ## [1.20.4] — 2026-07-20
 
 ### Changed

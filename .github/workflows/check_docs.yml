@@ -6,7 +6,7 @@ name: 📋 Docs Update Enforcer
 # Operational content is exempt:
 # - _posts/: generated blog posts
 # - _knowledge/: generated Obsidian notes
-# - _reviews/: review-note inputs and completed revision records
+# - _reviews/: review-note inputs
 
 on:
   push:

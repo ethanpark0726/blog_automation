@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-3.1%20Flash--Lite-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.20.4-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.20.5-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -172,6 +172,7 @@ After writing a ready review note in `_reviews/pending`, deploy the latest `clou
 - `/revise latest` runs only the newest ready review note.
 - `/revise <...>` filters by `target_post_id`, short `post_id` suffix, or review filename fragment.
 - The GitHub Actions workflow sends a Telegram success/failure notification after completion.
+- Successfully processed review notes are deleted; failed notes stay in `_reviews/pending` for retry.
 
 ---
 
@@ -264,7 +265,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.20.4** — Improves source diversity scoring by reusing Crossref for trivia research and limiting single-domain reference dominance.
+**v1.20.5** — Deletes successfully processed Obsidian review notes instead of archiving completed logs.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -300,6 +301,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.20.2**: Project domain glossary for installed agent skills
 - **`[x]` v1.20.3**: Project-scoped engineering skills and lockfile committed for reproducible agent workflows
 - **`[x]` v1.20.4**: Trivia source diversity improvement with Crossref and per-domain reference caps
+- **`[x]` v1.20.5**: Delete processed Obsidian review notes instead of archiving completed logs
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 

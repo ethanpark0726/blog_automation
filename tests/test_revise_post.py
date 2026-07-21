@@ -251,7 +251,7 @@ status: ready
             self.assertEqual([old_path], [review.path for review in filter_reviews(reviews, "old")])
             self.assertEqual(reviews, filter_reviews(reviews, ""))
 
-    def test_complete_review_records_audit_summary(self):
+    def test_complete_review_deletes_processed_note(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             pending = root / "_reviews" / "pending"
@@ -279,25 +279,16 @@ status: ready
             original_cwd = Path.cwd()
             try:
                 os.chdir(root)
-                completed_path = complete_review(
-                    review,
-                    ["_posts/ko/post.md", "_posts/en/post.md", "_knowledge/topics/topic.md"],
-                )
-                completed_full_path = root / completed_path
+                deleted_path = complete_review(review)
+                deleted_full_path = root / deleted_path
                 pending_exists = review_path.exists()
-                completed_exists = completed_full_path.exists()
-                completed_text = completed_full_path.read_text(encoding="utf-8")
+                completed_dir_exists = (root / "_reviews" / "completed").exists()
             finally:
                 os.chdir(original_cwd)
 
         self.assertFalse(pending_exists)
-        self.assertTrue(completed_exists)
-        self.assertIn("status: completed", completed_text)
-        self.assertIn("completed_at:", completed_text)
-        self.assertIn("## Completion Summary", completed_text)
-        self.assertIn("`_posts/ko/post.md`", completed_text)
-        self.assertIn("`_posts/en/post.md`", completed_text)
-        self.assertIn("`_knowledge/topics/topic.md`", completed_text)
+        self.assertFalse(deleted_full_path.exists())
+        self.assertFalse(completed_dir_exists)
 
 
 if __name__ == "__main__":
