@@ -265,7 +265,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.20.7** — Skips template-placeholder Obsidian review notes before revision lookup.
+**v1.20.7** — Skips template-placeholder Obsidian review notes and uses the English post title for revision research fallback.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -303,7 +303,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.20.4**: Trivia source diversity improvement with Crossref and per-domain reference caps
 - **`[x]` v1.20.5**: Delete processed Obsidian review notes instead of archiving completed logs
 - **`[x]` v1.20.6**: Crossref mock added to source coverage regression test
-- **`[x]` v1.20.7**: Placeholder Obsidian review notes are skipped before revision lookup
+- **`[x]` v1.20.7**: Placeholder Obsidian review notes are skipped, and Korean-only review notes can still seed English revision research from the post title
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 
