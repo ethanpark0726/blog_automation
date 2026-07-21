@@ -28,6 +28,7 @@ from revise_post import (  # noqa: E402
     discover_ready_reviews,
     filter_reviews,
     find_posts_by_post_id,
+    is_placeholder_post_id,
     parse_review_note,
 )
 
@@ -152,6 +153,34 @@ status: ready
             finally:
                 os.chdir(original_cwd)
 
+        self.assertEqual([], discovered)
+
+    def test_discover_skips_placeholder_review_notes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            pending = root / "_reviews" / "pending"
+            pending.mkdir(parents=True)
+            (pending / "solar-system-formation-d0fca2e0.md").write_text(
+                """---
+target_post_id: "replace-with-real-post-id"
+scope: bilingual
+status: ready
+---
+
+# Revision
+
+- Add more details.
+""",
+                encoding="utf-8",
+            )
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                discovered = discover_ready_reviews()
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertTrue(is_placeholder_post_id("replace-with-real-post-id"))
         self.assertEqual([], discovered)
 
     def test_apply_revision_updates_paired_posts(self):
