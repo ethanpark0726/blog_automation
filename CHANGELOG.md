@@ -6,6 +6,13 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.20.6] — 2026-07-20
+
+### Fixed
+- **Source Coverage Test Isolation**: Mocked Crossref in the missing-source integration test so GitHub Actions cannot accidentally hit the live Crossref API after trivia-mode research started using it.
+
+---
+
 ## [1.20.5] — 2026-07-20
 
 ### Changed
