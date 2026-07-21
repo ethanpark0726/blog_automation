@@ -1,4 +1,6 @@
 import json
+import contextlib
+import io
 import os
 import tempfile
 import types
@@ -30,6 +32,7 @@ from revise_post import (  # noqa: E402
     find_posts_by_post_id,
     is_placeholder_post_id,
     parse_review_note,
+    collect_review_research,
 )
 
 
@@ -233,10 +236,11 @@ status: ready
             try:
                 os.chdir(root)
                 with patch.object(revise_post, "collect_review_research", return_value=""):
-                    changed = apply_revision(review, model, SimpleNamespace(
-                        record_attempt=lambda _stage: None,
-                        record_success=lambda _stage, _response: None,
-                    ))
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        changed = apply_revision(review, model, SimpleNamespace(
+                            record_attempt=lambda _stage: None,
+                            record_success=lambda _stage, _response: None,
+                        ))
                 self.assertEqual(2, model.calls)
                 self.assertIn("_posts/en/post.md", {Path(path).as_posix() for path in changed})
                 self.assertIn("Revised English", en_path.read_text(encoding="utf-8"))
@@ -255,11 +259,32 @@ status: ready
             original_cwd = Path.cwd()
             try:
                 os.chdir(root)
-                matches = find_posts_by_post_id("0e0dace8")
+                with contextlib.redirect_stdout(io.StringIO()):
+                    matches = find_posts_by_post_id("0e0dace8")
             finally:
                 os.chdir(original_cwd)
 
         self.assertEqual({"ko", "en"}, set(matches))
+
+    def test_review_research_uses_english_title_for_korean_review_notes(self):
+        front_matter = """---
+layout: post
+title: "Solar System Formation"
+lang: en
+post_id: "solar-system-formation-d0fca2e0"
+---
+"""
+        review = ReviewRequest(
+            path=Path("_reviews/pending/request.md"),
+            target_post_id="solar-system-formation-d0fca2e0",
+            instructions=["태양계 형성 과정을 보강한다."],
+        )
+
+        with patch.object(revise_post, "search_duckduckgo", return_value="Title: Solar System Formation\nSummary\nLink: https://example.com"):
+            with patch.object(revise_post, "search_wikipedia", return_value="No Wikipedia pages found."):
+                facts = collect_review_research(review, {"en": "## Introduction\n\nBody"}, {"en": front_matter})
+
+        self.assertIn("Solar System Formation", facts)
 
     def test_filter_reviews_accepts_latest_and_partial_identifiers(self):
         with tempfile.TemporaryDirectory() as temp_dir:

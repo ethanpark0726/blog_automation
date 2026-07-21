@@ -232,12 +232,23 @@ def search_wikipedia(query: str) -> str:
     return "\n\n".join(results) if results else "No Wikipedia pages found."
 
 
-def collect_review_research(review: ReviewRequest, bodies: dict[str, str]) -> str:
+def front_matter_title(front_matter: str) -> str:
+    metadata, _body = parse_front_matter(front_matter)
+    return str(metadata.get("title") or "").strip()
+
+
+def collect_review_research(
+    review: ReviewRequest, bodies: dict[str, str], front_matters: dict[str, str] | None = None
+) -> str:
     """Collect lightweight English facts for review-driven enrichment."""
     seeds = []
     instruction_text = " ".join(review.instructions)
     if instruction_text:
         seeds.extend(build_search_queries(instruction_text, limit=4))
+    if front_matters:
+        title = front_matter_title(front_matters.get("en", ""))
+        if title:
+            seeds.extend(build_search_queries(title, limit=3))
     heading_match = re.search(r"^#\s+(.+)$", bodies.get("en", ""), re.MULTILINE)
     if heading_match:
         seeds.extend(build_search_queries(heading_match.group(1), limit=2))
@@ -493,7 +504,7 @@ def apply_revision(review: ReviewRequest, model: GeminiModelAdapter, tracker: Us
         front_matters[lang] = front_matter
         bodies[lang] = body
 
-    research_facts = collect_review_research(review, bodies)
+    research_facts = collect_review_research(review, bodies, front_matters)
     revised = request_revision(review, model, tracker, bodies, front_matters, research_facts)
 
     updated_paths = []
