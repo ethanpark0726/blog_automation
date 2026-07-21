@@ -25,6 +25,7 @@ REVISION_CONFIG = {"temperature": 0.2, "max_output_tokens": 16384}
 MAX_REVISION_ATTEMPTS = 2
 MIN_REVISION_WORD_RETENTION = 0.70
 MIN_REVISION_CHAR_RETENTION = 0.70
+PLACEHOLDER_POST_IDS = {"", "replace-with-real-post-id"}
 
 
 @dataclass
@@ -101,6 +102,10 @@ def parse_review_note(path: Path) -> ReviewRequest:
     )
 
 
+def is_placeholder_post_id(post_id: str) -> bool:
+    return post_id.strip().casefold() in PLACEHOLDER_POST_IDS
+
+
 def discover_ready_reviews(directory: Path = DEFAULT_REVIEW_DIR) -> list[ReviewRequest]:
     reviews = []
     for path in sorted(directory.glob("*.md")):
@@ -110,6 +115,11 @@ def discover_ready_reviews(directory: Path = DEFAULT_REVIEW_DIR) -> list[ReviewR
             continue
         review = parse_review_note(path)
         if review.status.casefold() == "ready":
+            if is_placeholder_post_id(review.target_post_id):
+                print(
+                    f"[Revision] Skipping {path}: target_post_id is missing or still a template placeholder"
+                )
+                continue
             reviews.append(review)
     return reviews
 

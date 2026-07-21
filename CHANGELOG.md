@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.20.7] — 2026-07-20
+
+### Fixed
+- **Review Note Placeholder Safety**: Ready Obsidian review notes with a missing or template `target_post_id` are skipped before post lookup so `/revise` does not fail on copied templates.
+
 All notable changes to this project are documented here.  
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).  
 Versioning follows [Semantic Versioning](https://semver.org/).
