@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.21.6] — 2026-07-21
+
+### Fixed
+- **Semantic Enrichment Validation**: Removed AI-generated literal include/exclude criteria that rejected equivalent terminology such as `protostar formation` and `a protosun forms`.
+
+### Changed
+- **Smaller Revision Plans**: Revision plans no longer generate unused literal criteria, reducing Gemini plan output while retaining action coverage, operation safety, content quality, heading preservation, and atomic-write validation.
+
+---
+
 ## [1.21.5] — 2026-07-21
 
 ### Fixed

@@ -399,8 +399,6 @@ For each instruction return one action with the same R-number.
 Kinds: delete, replace, enrich, style.
 Set requires_research only when new factual content is requested.
 Create short English search queries only for factual enrichment.
-Create literal must_include and must_exclude checks when the instruction names required or forbidden wording.
-Leave must_include and must_exclude empty for semantic style actions.
 
 Return JSON only:
 {{
@@ -410,9 +408,7 @@ Return JSON only:
       "instruction": "original instruction",
       "kind": "delete|replace|enrich|style",
       "languages": ["en", "ko"],
-      "requires_research": false,
-      "must_include": {{"en": [], "ko": []}},
-      "must_exclude": {{"en": [], "ko": []}}
+      "requires_research": false
     }}
   ],
   "search_queries_en": []
@@ -435,15 +431,6 @@ def validate_revision_plan(review: ReviewRequest, payload: dict[str, Any]) -> di
         languages = action.get("languages")
         if not isinstance(languages, list) or not languages or not set(languages) <= {"en", "ko"}:
             raise ValueError(f"Revision action {action['id']} has invalid languages")
-        for field_name in ("must_include", "must_exclude"):
-            values = action.get(field_name) or {}
-            if not isinstance(values, dict):
-                raise ValueError(f"Revision action {action['id']} has invalid {field_name}")
-            for lang in ("en", "ko"):
-                if not isinstance(values.get(lang, []), list):
-                    raise ValueError(
-                        f"Revision action {action['id']} has invalid {field_name}.{lang}"
-                    )
     queries = payload.get("search_queries_en") or []
     if not isinstance(queries, list):
         raise ValueError("Revision plan search_queries_en must be a list")
@@ -559,20 +546,6 @@ def heading_preservation_errors(original: str, revised: str) -> list[str]:
     return errors
 
 
-def plan_criteria(plan: dict[str, Any], field_name: str, lang: str) -> list[str]:
-    values = []
-    for action in plan["actions"]:
-        if lang not in action["languages"]:
-            continue
-        if action.get("kind") == "style":
-            continue
-        if field_name == "must_include" and action.get("kind") == "delete":
-            continue
-        lang_values = (action.get(field_name) or {}).get(lang) or []
-        values.extend(str(value).strip() for value in lang_values if str(value).strip())
-    return values
-
-
 def plan_applies_to(plan: dict[str, Any], lang: str) -> bool:
     return any(lang in action["languages"] for action in plan["actions"])
 
@@ -676,12 +649,6 @@ def apply_section_operations(
     revised = "\n\n".join(
         section["content"].strip() for section in sections if section["content"].strip()
     )
-    for value in plan_criteria(plan, "must_include", lang):
-        if value.casefold() not in revised.casefold():
-            raise ValueError(f"Revised {lang} body is missing required content: {value}")
-    for value in plan_criteria(plan, "must_exclude", lang):
-        if value.casefold() in revised.casefold():
-            raise ValueError(f"Revised {lang} body still contains forbidden content: {value}")
     if revised.strip() == original.strip():
         raise ValueError(f"Revision operations did not change the {lang} body")
     return normalize_legacy_section_headings(revised)

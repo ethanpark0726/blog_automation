@@ -384,6 +384,37 @@ class RevisePostTests(unittest.TestCase):
 
         self.assertIn("시작됐다", revised)
 
+    def test_model_generated_enrichment_phrase_is_not_a_literal_requirement(self):
+        plan = {
+            "actions": [
+                {
+                    "id": "R1",
+                    "kind": "enrich",
+                    "languages": ["en"],
+                    "must_include": {"en": ["protostar formation"], "ko": []},
+                    "must_exclude": {"en": [], "ko": []},
+                }
+            ]
+        }
+        payload = {
+            "operations": [
+                {
+                    "action_ids": ["R1"],
+                    "operation": "insert_after",
+                    "target": "section_1",
+                    "content": "## Protosun\n\nA protosun forms as the collapsing cloud heats up.",
+                }
+            ],
+            "applied": ["R1"],
+            "unresolved": [],
+        }
+
+        revised = revise_post.apply_section_operations(
+            "## Solar Nebula\n\nGravity collapses the cloud.", payload, plan, "en"
+        )
+
+        self.assertIn("A protosun forms", revised)
+
     def test_revision_accepts_valid_article_after_requested_style_reduction(self):
         en_front_matter, original_en = revise_post.split_front_matter(post("en", "style-123"))
         ko_front_matter, original_ko = revise_post.split_front_matter(post("ko", "style-123"))
