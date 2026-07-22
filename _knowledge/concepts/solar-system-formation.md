@@ -33,7 +33,14 @@ Solar System Formation에 대한 블로그 포스트
 - [[과학-교육|과학 교육]]
 
 ## Sources
-- 
+- [[enwikipediaorg-4e38e365|Formation and evolution of the Solar System]]
+- [[enwikipediaorg-13adcf49|History of Solar System formation and evolution hypotheses]]
+- [[enwikipediaorg-85eabfa4|Accretion (astrophysics)]]
+- [[enwikipediaorg-bcb59964|Accretion disk]]
+- [[duckduckgocom-ac9cfb05|Solar apex motion relative to near stars.]]
+- [[duckduckgocom-4edeb992|Cosmogony]]
+- [[duckduckgocom-708eddb3|Solar System dynamic theories]]
+- [[duckduckgocom-299f689b|Stellar evolution]]
 
 ## Follow-up Questions
 - What adjacent concept should be explained next?
