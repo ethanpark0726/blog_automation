@@ -466,10 +466,12 @@ Return only operations for sections that must change. Unmentioned sections will 
 Rules:
 1. Targets are preamble, section_1, section_2, and so on from the catalog.
 2. replace content must contain the complete replacement block, including its ## heading for a section.
-3. delete removes the target block. insert_after adds a complete new block after the target.
-4. Preserve facts, tables, Mermaid diagrams, code blocks, headings, and references unless an action changes them.
-5. Every action ID must appear in applied or unresolved. Do not claim applied unless its operation is present.
-6. Use declarative Korean endings such as ~이다/~했다 when the plan requests a neutral style.
+3. Use replace_text with an exact old_text substring for wording and style changes; never rewrite a whole section for them.
+4. Use insert_after or replace_text for enrichment so the existing section remains intact.
+5. delete removes the target block. insert_after adds a complete new block after the target.
+6. Preserve facts, tables, Mermaid diagrams, code blocks, headings, and references unless an action changes them.
+7. Every action ID must appear in applied or unresolved. Do not claim applied unless its operation is present.
+8. Use declarative Korean endings such as ~이다/~했다 when the plan requests a neutral style.
 {canonical}
 Plan:
 {json.dumps(language_plan, ensure_ascii=False)}
@@ -490,7 +492,7 @@ Current body:
 Return JSON only:
 {{
   "operations": [
-    {{"action_ids": ["R1"], "operation": "replace|delete|insert_after", "target": "preamble|section_N", "content": ""}}
+    {{"action_ids": ["R1"], "operation": "replace|replace_text|delete|insert_after", "target": "preamble|section_N", "old_text": "required for replace_text", "content": ""}}
   ],
   "applied": ["R1"],
   "unresolved": []
@@ -581,6 +583,13 @@ def apply_section_operations(
     sections = split_markdown_sections(original)
     operation_actions = set()
     touched = set()
+    action_kinds = {str(action["id"]): str(action["kind"]) for action in plan["actions"]}
+    allowed_operations = {
+        "delete": {"delete", "replace_text"},
+        "replace": {"replace", "replace_text"},
+        "enrich": {"insert_after", "replace_text"},
+        "style": {"replace_text"},
+    }
     for operation in operations:
         if not isinstance(operation, dict):
             raise ValueError(f"Invalid {lang} revision operation")
@@ -592,13 +601,24 @@ def apply_section_operations(
         action_ids = {str(action_id or "") for action_id in action_ids}
         operation_name = str(operation.get("operation") or "")
         target = str(operation.get("target") or "")
+        old_text = str(operation.get("old_text") or "")
         content = str(operation.get("content") or "").strip()
         unknown_actions = action_ids - required
         if unknown_actions:
             raise ValueError(f"Unknown {lang} revision actions: {sorted(unknown_actions)}")
-        if operation_name not in {"replace", "delete", "insert_after"}:
+        if operation_name not in {"replace", "replace_text", "delete", "insert_after"}:
             raise ValueError(f"Unsupported {lang} revision operation: {operation_name}")
-        if (operation_name, target) in touched:
+        incompatible = {
+            action_id
+            for action_id in action_ids
+            if operation_name not in allowed_operations[action_kinds[action_id]]
+        }
+        if incompatible:
+            raise ValueError(
+                f"Unsafe {lang} {operation_name} operation for actions: {sorted(incompatible)}"
+            )
+        touch_key = (operation_name, target, old_text if operation_name == "replace_text" else "")
+        if touch_key in touched:
             raise ValueError(f"Duplicate {lang} revision operation for {target}")
         target_index = next(
             (index for index, section in enumerate(sections) if section["id"] == target),
@@ -606,11 +626,19 @@ def apply_section_operations(
         )
         if target_index is None:
             raise ValueError(f"Unknown {lang} revision target: {target}")
-        if operation_name != "delete" and not content:
+        if operation_name not in {"delete", "replace_text"} and not content:
             raise ValueError(f"{operation_name} requires content for {lang} target {target}")
+        if operation_name == "replace_text" and not old_text:
+            raise ValueError(f"replace_text requires old_text for {lang} target {target}")
+        if operation_name == "replace_text" and old_text not in sections[target_index]["content"]:
+            raise ValueError(f"replace_text old_text was not found in {lang} target {target}")
 
         if operation_name == "replace":
             sections[target_index]["content"] = content
+        elif operation_name == "replace_text":
+            sections[target_index]["content"] = sections[target_index]["content"].replace(
+                old_text, content
+            )
         elif operation_name == "delete":
             sections[target_index]["content"] = ""
         else:
@@ -618,7 +646,7 @@ def apply_section_operations(
                 target_index + 1,
                 {"id": f"inserted_{len(sections)}", "content": content},
             )
-        touched.add((operation_name, target))
+        touched.add(touch_key)
         operation_actions.update(action_ids)
 
     if operation_actions != required:

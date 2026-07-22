@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.21.1] — 2026-07-21
+
+### Fixed
+- **Revision Content Preservation**: Style actions now use exact text replacement and enrichment actions use text replacement or insertion, preventing Gemini from shortening an entire section while applying a small review request.
+
+---
+
 ## [1.21.0] — 2026-07-21
 
 ### Added

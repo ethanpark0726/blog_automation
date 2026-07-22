@@ -145,10 +145,9 @@ class SectionOperationModel:
                     {"action_id": "R1", "operation": "delete", "target": "preamble", "content": ""},
                     {
                         "action_ids": ["R2"],
-                        "operation": "replace",
+                        "operation": "insert_after",
                         "target": "section_1",
-                        "content": "## Introduction\n\nHydrogen fusion begins after gravitational contraction. "
-                        + ("Existing English body. " * 260),
+                        "content": "## Protosun Formation\n\nHydrogen fusion begins after gravitational contraction.",
                     },
                 ],
                 "applied": ["R1", "R2"],
@@ -159,17 +158,24 @@ class SectionOperationModel:
                 "operations": [
                     {"action_id": "R1", "operation": "delete", "target": "preamble", "content": ""},
                     {
-                        "action_ids": ["R2", "R3"],
-                        "operation": "replace",
+                        "action_ids": ["R2"],
+                        "operation": "insert_after",
                         "target": "section_1",
-                        "content": "## 소개\n\n중력 수축 이후 중심 온도가 상승하면서 수소 핵융합이 시작된다. "
-                        + ("기존 한국어 본문이다. " * 90),
+                        "content": "## 원시 태양 형성\n\n중력 수축 이후 중심 온도가 상승하면서 수소 핵융합이 시작된다.",
                     },
                     {
                         "action_ids": ["R3"],
-                        "operation": "replace",
+                        "operation": "replace_text",
+                        "target": "section_1",
+                        "old_text": "기존 한국어 본문입니다.",
+                        "content": "기존 한국어 본문이다.",
+                    },
+                    {
+                        "action_ids": ["R3"],
+                        "operation": "replace_text",
                         "target": "section_2",
-                        "content": "## 세부 내용\n\n" + ("추가 설명이다. " * 90),
+                        "old_text": "추가 설명입니다.",
+                        "content": "추가 설명이다.",
                     },
                 ],
                 "applied": ["R1", "R2", "R3"],
@@ -212,12 +218,93 @@ class KoreanOnlyOperationModel:
                 "operations": [
                     {
                         "action_ids": ["R1"],
-                        "operation": "replace",
+                        "operation": "replace_text",
                         "target": "section_1",
-                        "content": "## 소개\n\n" + ("수정된 한국어 본문이다. " * 100),
+                        "old_text": "기존 한국어 본문입니다.",
+                        "content": "수정된 한국어 본문이다.",
                     }
                 ],
                 "applied": ["R1"],
+                "unresolved": [],
+            }
+        return SimpleNamespace(
+            text=json.dumps(payload, ensure_ascii=False),
+            usage_metadata=SimpleNamespace(
+                prompt_token_count=10,
+                candidates_token_count=20,
+                total_token_count=30,
+            ),
+        )
+
+
+class PromptAwarePreservationModel:
+    def __init__(self):
+        self.calls = 0
+
+    def generate_content(self, prompt, generation_config=None):
+        del generation_config
+        self.calls += 1
+        if self.calls == 1:
+            payload = {
+                "actions": [
+                    {
+                        "id": "R1",
+                        "instruction": "Add formation context.",
+                        "kind": "enrich",
+                        "languages": ["en"],
+                        "requires_research": False,
+                        "must_include": {"en": ["New formation context"], "ko": []},
+                        "must_exclude": {"en": [], "ko": []},
+                    },
+                    {
+                        "id": "R2",
+                        "instruction": "Use neutral wording.",
+                        "kind": "style",
+                        "languages": ["en"],
+                        "requires_research": False,
+                        "must_include": {"en": ["Neutral English body"], "ko": []},
+                        "must_exclude": {"en": [], "ko": []},
+                    },
+                ],
+                "search_queries_en": [],
+            }
+        elif "replace_text" in prompt:
+            payload = {
+                "operations": [
+                    {
+                        "action_ids": ["R1"],
+                        "operation": "insert_after",
+                        "target": "section_1",
+                        "content": "## Formation Context\n\nNew formation context.",
+                    },
+                    {
+                        "action_ids": ["R2"],
+                        "operation": "replace_text",
+                        "target": "section_1",
+                        "old_text": "Existing English body.",
+                        "content": "Neutral English body.",
+                    },
+                ],
+                "applied": ["R1", "R2"],
+                "unresolved": [],
+            }
+        else:
+            payload = {
+                "operations": [
+                    {
+                        "action_ids": ["R1", "R2"],
+                        "operation": "replace",
+                        "target": "section_1",
+                        "content": "## Introduction\n\nNew formation context with Neutral English body.",
+                    },
+                    {
+                        "action_ids": ["R1", "R2"],
+                        "operation": "replace",
+                        "target": "section_2",
+                        "content": "## Details\n\nShort replacement.",
+                    },
+                ],
+                "applied": ["R1", "R2"],
                 "unresolved": [],
             }
         return SimpleNamespace(
@@ -344,6 +431,40 @@ class RevisePostTests(unittest.TestCase):
         self.assertEqual(2, model.calls)
         self.assertEqual(before_en, after_en)
         self.assertIn("수정된 한국어 본문이다", after_ko)
+
+    def test_style_and_enrichment_preserve_the_existing_article(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            post_id = "preserve-123"
+            (root / "_posts" / "ko").mkdir(parents=True)
+            (root / "_posts" / "en").mkdir(parents=True)
+            ko_path = root / "_posts" / "ko" / "post.md"
+            en_path = root / "_posts" / "en" / "post.md"
+            ko_path.write_text(post("ko", post_id), encoding="utf-8")
+            en_path.write_text(post("en", post_id), encoding="utf-8")
+            review = ReviewRequest(
+                path=root / "_reviews" / "pending" / "request.md",
+                target_post_id=post_id,
+                instructions=["설명을 보강한다.", "중립적인 문체로 바꾼다."],
+            )
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                apply_revision(
+                    review,
+                    PromptAwarePreservationModel(),
+                    SimpleNamespace(
+                        record_attempt=lambda _stage: None,
+                        record_success=lambda _stage, _response: None,
+                    ),
+                )
+                revised = en_path.read_text(encoding="utf-8")
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertIn("New formation context", revised)
+        self.assertGreater(revised.count("Neutral English body."), 200)
+        self.assertIn("Additional explanation.", revised)
 
     def test_parse_and_discover_ready_review(self):
         with tempfile.TemporaryDirectory() as temp_dir:
