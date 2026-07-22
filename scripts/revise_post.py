@@ -337,6 +337,47 @@ def section_catalog(body: str) -> str:
     return "\n".join(catalog)
 
 
+def split_markdown_blocks(content: str) -> tuple[str, list[str]]:
+    """Split one section into its heading and fence-aware paragraph blocks."""
+    lines = content.strip().splitlines()
+    heading = lines.pop(0).strip() if lines and re.match(r"^##\s+", lines[0]) else ""
+    blocks: list[str] = []
+    current: list[str] = []
+    fence = ""
+    for line in lines:
+        marker = line.strip()[:3]
+        if not fence and not line.strip():
+            if current:
+                blocks.append("\n".join(current).strip())
+                current = []
+            continue
+        current.append(line)
+        if marker in {"```", "~~~"}:
+            fence = "" if fence == marker else marker if not fence else fence
+    if current:
+        blocks.append("\n".join(current).strip())
+    return heading, blocks
+
+
+def block_catalog(body: str) -> str:
+    catalog = []
+    for section in split_markdown_sections(body):
+        heading, blocks = split_markdown_blocks(section["content"])
+        catalog.append(f"- {section['id']}: {heading or '(preamble)'}")
+        for index, block in enumerate(blocks, 1):
+            preview = re.sub(r"\s+", " ", block)[:160]
+            catalog.append(f"  - {section['id']}.block_{index}: {preview}")
+    return "\n".join(catalog)
+
+
+def replace_markdown_block(content: str, block_number: int, replacement: str) -> str:
+    heading, blocks = split_markdown_blocks(content)
+    if block_number < 1 or block_number > len(blocks):
+        raise ValueError(f"Unknown Markdown block: block_{block_number}")
+    blocks[block_number - 1] = replacement
+    return "\n\n".join(part for part in [heading, *blocks] if part)
+
+
 def revision_plan_prompt(review: ReviewRequest, bodies: dict[str, str]) -> str:
     instructions = "\n".join(
         f"R{index}: {instruction}" for index, instruction in enumerate(review.instructions, 1)
@@ -456,10 +497,10 @@ Apply the structured Review Note plan to this existing {language} Markdown artic
 Return only operations for sections that must change. Unmentioned sections will be preserved by code.
 
 Rules:
-1. Targets are preamble, section_1, section_2, and so on from the catalog.
+1. Targets are stable section or paragraph-block IDs from the catalog.
 2. replace content must contain the complete replacement block, including its ## heading for a section.
-3. Use replace_text with an exact old_text substring for wording and style changes; never rewrite a whole section for them.
-4. Use insert_after or replace_text for enrichment so the existing section remains intact.
+3. Use replace_block for wording and style changes. Return only the new paragraph content.
+4. Prefer insert_after for enrichment. Use replace_block only when expanding one existing paragraph.
 5. delete removes the target block. insert_after adds a complete new block after the target.
 6. Preserve facts, tables, Mermaid diagrams, code blocks, headings, and references unless an action changes them.
 7. Every action ID must appear in applied or unresolved. Do not claim applied unless its operation is present.
@@ -473,7 +514,7 @@ Research facts:
 ---
 
 Section catalog:
-{section_catalog(body)}
+{block_catalog(body)}
 
 Current body:
 ---
@@ -483,7 +524,7 @@ Current body:
 Return JSON only:
 {{
   "operations": [
-    {{"action_ids": ["R1"], "operation": "replace|replace_text|delete|insert_after", "target": "preamble|section_N", "old_text": "required for replace_text", "content": ""}}
+    {{"action_ids": ["R1"], "operation": "replace|replace_block|delete|insert_after", "target": "preamble|section_N|section_N.block_N", "content": ""}}
   ],
   "applied": ["R1"],
   "unresolved": []
@@ -559,10 +600,10 @@ def apply_section_operations(
     touched = set()
     action_kinds = {str(action["id"]): str(action["kind"]) for action in plan["actions"]}
     allowed_operations = {
-        "delete": {"delete", "replace_text"},
-        "replace": {"replace", "replace_text"},
-        "enrich": {"insert_after", "replace_text"},
-        "style": {"replace_text"},
+        "delete": {"delete"},
+        "replace": {"replace", "replace_block"},
+        "enrich": {"insert_after", "replace_block"},
+        "style": {"replace_block"},
     }
     for operation in operations:
         if not isinstance(operation, dict):
@@ -575,12 +616,11 @@ def apply_section_operations(
         action_ids = {str(action_id or "") for action_id in action_ids}
         operation_name = str(operation.get("operation") or "")
         target = str(operation.get("target") or "")
-        old_text = str(operation.get("old_text") or "")
         content = str(operation.get("content") or "").strip()
         unknown_actions = action_ids - required
         if unknown_actions:
             raise ValueError(f"Unknown {lang} revision actions: {sorted(unknown_actions)}")
-        if operation_name not in {"replace", "replace_text", "delete", "insert_after"}:
+        if operation_name not in {"replace", "replace_block", "delete", "insert_after"}:
             raise ValueError(f"Unsupported {lang} revision operation: {operation_name}")
         incompatible = {
             action_id
@@ -591,29 +631,28 @@ def apply_section_operations(
             raise ValueError(
                 f"Unsafe {lang} {operation_name} operation for actions: {sorted(incompatible)}"
             )
-        touch_key = (operation_name, target, old_text if operation_name == "replace_text" else "")
+        touch_key = (operation_name, target)
         if touch_key in touched:
             raise ValueError(f"Duplicate {lang} revision operation for {target}")
+        block_match = re.fullmatch(r"(preamble|section_\d+)\.block_(\d+)", target)
+        section_target = block_match.group(1) if block_match else target
         target_index = next(
-            (index for index, section in enumerate(sections) if section["id"] == target),
+            (index for index, section in enumerate(sections) if section["id"] == section_target),
             None,
         )
         if target_index is None:
             raise ValueError(f"Unknown {lang} revision target: {target}")
-        if operation_name not in {"delete", "replace_text"} and not content:
+        if operation_name != "delete" and not content:
             raise ValueError(f"{operation_name} requires content for {lang} target {target}")
-        if operation_name == "replace_text" and not old_text.strip():
-            raise ValueError(f"replace_text requires old_text for {lang} target {target}")
 
         if operation_name == "replace":
             sections[target_index]["content"] = content
-        elif operation_name == "replace_text":
-            pattern = re.compile(r"\s+".join(re.escape(part) for part in old_text.split()))
-            sections[target_index]["content"], replacements = pattern.subn(
-                lambda _match: content, sections[target_index]["content"]
+        elif operation_name == "replace_block":
+            if not block_match:
+                raise ValueError(f"replace_block requires a block target for {lang}: {target}")
+            sections[target_index]["content"] = replace_markdown_block(
+                sections[target_index]["content"], int(block_match.group(2)), content
             )
-            if not replacements:
-                raise ValueError(f"replace_text old_text was not found in {lang} target {target}")
         elif operation_name == "delete":
             sections[target_index]["content"] = ""
         else:

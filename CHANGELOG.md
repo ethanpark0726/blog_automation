@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.21.4] — 2026-07-21
+
+### Fixed
+- **Stable Revision Targets**: Replaced fragile model-generated source-text matching with code-generated Markdown block IDs such as `section_1.block_1`.
+
+### Changed
+- **Smaller Revision Responses**: Style operations return only replacement block content instead of duplicating both the old and new text in Gemini output.
+
+---
+
 ## [1.21.3] — 2026-07-21
 
 ### Fixed

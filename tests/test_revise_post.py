@@ -165,17 +165,15 @@ class SectionOperationModel:
                     },
                     {
                         "action_ids": ["R3"],
-                        "operation": "replace_text",
-                        "target": "section_1",
-                        "old_text": "기존 한국어 본문입니다.",
-                        "content": "기존 한국어 본문이다.",
+                        "operation": "replace_block",
+                        "target": "section_1.block_1",
+                        "content": "기존 한국어 본문이다. " * 90,
                     },
                     {
                         "action_ids": ["R3"],
-                        "operation": "replace_text",
-                        "target": "section_2",
-                        "old_text": "추가 설명입니다.",
-                        "content": "추가 설명이다.",
+                        "operation": "replace_block",
+                        "target": "section_2.block_1",
+                        "content": "추가 설명이다. " * 90,
                     },
                 ],
                 "applied": ["R1", "R2", "R3"],
@@ -218,10 +216,9 @@ class KoreanOnlyOperationModel:
                 "operations": [
                     {
                         "action_ids": ["R1"],
-                        "operation": "replace_text",
-                        "target": "section_1",
-                        "old_text": "기존 한국어 본문입니다.",
-                        "content": "수정된 한국어 본문이다.",
+                        "operation": "replace_block",
+                        "target": "section_1.block_1",
+                        "content": "수정된 한국어 본문이다. " * 100,
                     }
                 ],
                 "applied": ["R1"],
@@ -268,6 +265,25 @@ class PromptAwarePreservationModel:
                 ],
                 "search_queries_en": [],
             }
+        elif "replace_block" in prompt:
+            payload = {
+                "operations": [
+                    {
+                        "action_ids": ["R1"],
+                        "operation": "insert_after",
+                        "target": "section_1",
+                        "content": "## Formation Context\n\nNew formation context.",
+                    },
+                    {
+                        "action_ids": ["R2"],
+                        "operation": "replace_block",
+                        "target": "section_1.block_1",
+                        "content": "Neutral English body. " * 260,
+                    },
+                ],
+                "applied": ["R1", "R2"],
+                "unresolved": [],
+            }
         elif "replace_text" in prompt:
             payload = {
                 "operations": [
@@ -281,7 +297,7 @@ class PromptAwarePreservationModel:
                         "action_ids": ["R2"],
                         "operation": "replace_text",
                         "target": "section_1",
-                        "old_text": "Existing English body.",
+                        "old_text": "This sentence does not exist in the source.",
                         "content": "Neutral English body.",
                     },
                 ],
@@ -289,24 +305,7 @@ class PromptAwarePreservationModel:
                 "unresolved": [],
             }
         else:
-            payload = {
-                "operations": [
-                    {
-                        "action_ids": ["R1", "R2"],
-                        "operation": "replace",
-                        "target": "section_1",
-                        "content": "## Introduction\n\nNew formation context with Neutral English body.",
-                    },
-                    {
-                        "action_ids": ["R1", "R2"],
-                        "operation": "replace",
-                        "target": "section_2",
-                        "content": "## Details\n\nShort replacement.",
-                    },
-                ],
-                "applied": ["R1", "R2"],
-                "unresolved": [],
-            }
+            raise AssertionError("Revision prompt is missing a supported safe edit operation")
         return SimpleNamespace(
             text=json.dumps(payload, ensure_ascii=False),
             usage_metadata=SimpleNamespace(
@@ -323,7 +322,7 @@ class RevisePostTests(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def test_replace_text_accepts_markdown_whitespace_differences(self):
+    def test_replace_block_does_not_require_echoing_source_text(self):
         plan = {
             "actions": [
                 {
@@ -339,9 +338,8 @@ class RevisePostTests(unittest.TestCase):
             "operations": [
                 {
                     "action_ids": ["R1"],
-                    "operation": "replace_text",
-                    "target": "section_1",
-                    "old_text": "First sentence. Second sentence.",
+                    "operation": "replace_block",
+                    "target": "section_1.block_1",
                     "content": "Neutral sentence.",
                 }
             ],
