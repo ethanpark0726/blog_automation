@@ -312,6 +312,17 @@ def call_gemini(
             else:
                 response = model.generate_content(prompt, generation_config=generation_config)
             tracker.record_success(stage, response)
+            metadata = getattr(response, "usage_metadata", None)
+            output_tokens = _read_value(
+                metadata, "candidates_token_count", "candidatesTokenCount"
+            )
+            candidates = getattr(response, "candidates", None) or []
+            finish_reason = getattr(candidates[0], "finish_reason", "unknown") if candidates else "unknown"
+            finish_reason = getattr(finish_reason, "name", finish_reason)
+            print(
+                f"[Gemini:{stage}] Success "
+                f"(output_tokens={output_tokens}, finish_reason={finish_reason})"
+            )
             return response.text.strip()
         except Exception as exc:
             last_info = classify_gemini_error(exc)

@@ -58,39 +58,39 @@ tags:
 """
 
 
-class FakeModel:
-    def generate_content(self, _prompt, generation_config=None):
-        del generation_config
-        ko = "## 소개\n\n" + ("수정된 한국어 본문입니다. " * 90)
-        ko += "\n\n## 세부 내용\n\n" + ("보강된 설명입니다. " * 90)
-        en = "## Introduction\n\n" + ("Revised English body. " * 260)
-        en += "\n\n## Details\n\n" + ("Expanded explanation. " * 260)
-        return SimpleNamespace(
-            text=json.dumps({"ko": ko, "en": en}, ensure_ascii=False),
-            usage_metadata=SimpleNamespace(
-                prompt_token_count=10,
-                candidates_token_count=20,
-                total_token_count=30,
-            ),
-        )
+def immediate_gemini_call(model, prompt, stage, tracker, generation_config=None, **_kwargs):
+    tracker.record_attempt(stage)
+    response = model.generate_content(prompt, generation_config=generation_config)
+    tracker.record_success(stage, response)
+    return response.text.strip()
 
 
-class ShortThenFullModel:
+class IncompleteOperationModel:
     def __init__(self):
         self.calls = 0
 
     def generate_content(self, _prompt, generation_config=None):
         del generation_config
         self.calls += 1
-        ko = "## 소개\n\n" + ("수정된 한국어 본문입니다. " * 90)
-        ko += "\n\n## 상세 내용\n\n" + ("보강된 설명입니다. " * 90)
         if self.calls == 1:
-            en = "## Introduction\n\nToo short.\n\n## Details\n\nStill too short."
+            payload = {
+                "actions": [
+                    {
+                        "id": "R1",
+                        "instruction": "Enrich the article.",
+                        "kind": "enrich",
+                        "languages": ["en", "ko"],
+                        "requires_research": False,
+                        "must_include": {"en": [], "ko": []},
+                        "must_exclude": {"en": [], "ko": []},
+                    }
+                ],
+                "search_queries_en": [],
+            }
         else:
-            en = "## Introduction\n\n" + ("Revised English body. " * 260)
-            en += "\n\n## Details\n\n" + ("Expanded explanation. " * 260)
+            payload = {"operations": [], "applied": ["R1"], "unresolved": []}
         return SimpleNamespace(
-            text=json.dumps({"ko": ko, "en": en}, ensure_ascii=False),
+            text=json.dumps(payload, ensure_ascii=False),
             usage_metadata=SimpleNamespace(
                 prompt_token_count=10,
                 candidates_token_count=20,
@@ -99,21 +99,215 @@ class ShortThenFullModel:
         )
 
 
-class AlwaysShortModel:
+class SectionOperationModel:
     def __init__(self):
         self.calls = 0
 
     def generate_content(self, _prompt, generation_config=None):
         del generation_config
         self.calls += 1
+        if self.calls == 1:
+            payload = {
+                "actions": [
+                    {
+                        "id": "R1",
+                        "instruction": "Remove the child-directed introduction and dad wording.",
+                        "kind": "delete",
+                        "languages": ["en", "ko"],
+                        "requires_research": False,
+                        "must_include": {"en": [], "ko": []},
+                        "must_exclude": {"en": ["Hey kids"], "ko": ["우리 친구들", "아빠"]},
+                    },
+                    {
+                        "id": "R2",
+                        "instruction": "Explain protosun formation.",
+                        "kind": "enrich",
+                        "languages": ["en", "ko"],
+                        "requires_research": True,
+                        "must_include": {"en": ["hydrogen fusion"], "ko": ["수소 핵융합"]},
+                        "must_exclude": {"en": [], "ko": []},
+                    },
+                    {
+                        "id": "R3",
+                        "instruction": "Use a neutral declarative Korean style.",
+                        "kind": "style",
+                        "languages": ["ko"],
+                        "requires_research": False,
+                        "must_include": {"en": [], "ko": []},
+                        "must_exclude": {"en": [], "ko": ["설명해요"]},
+                    },
+                ],
+                "search_queries_en": ["protosun formation hydrogen fusion"],
+            }
+        elif self.calls == 2:
+            payload = {
+                "operations": [
+                    {"action_id": "R1", "operation": "delete", "target": "preamble", "content": ""},
+                    {
+                        "action_ids": ["R2"],
+                        "operation": "insert_after",
+                        "target": "section_1",
+                        "content": "## Protosun Formation\n\nHydrogen fusion begins after gravitational contraction.",
+                    },
+                ],
+                "applied": ["R1", "R2"],
+                "unresolved": [],
+            }
+        else:
+            payload = {
+                "operations": [
+                    {"action_id": "R1", "operation": "delete", "target": "preamble", "content": ""},
+                    {
+                        "action_ids": ["R2"],
+                        "operation": "insert_after",
+                        "target": "section_1",
+                        "content": "## 원시 태양 형성\n\n중력 수축 이후 중심 온도가 상승하면서 수소 핵융합이 시작된다.",
+                    },
+                    {
+                        "action_ids": ["R3"],
+                        "operation": "replace_block",
+                        "target": "section_1.block_1",
+                        "content": "기존 한국어 본문이다. " * 90,
+                    },
+                    {
+                        "action_ids": ["R3"],
+                        "operation": "replace_block",
+                        "target": "section_2.block_1",
+                        "content": "추가 설명이다. " * 90,
+                    },
+                ],
+                "applied": ["R1", "R2", "R3"],
+                "unresolved": [],
+            }
         return SimpleNamespace(
-            text=json.dumps(
-                {
-                    "ko": "짧은 보강 내용입니다.",
-                    "en": "Short additional note.",
-                },
-                ensure_ascii=False,
+            text=json.dumps(payload, ensure_ascii=False),
+            usage_metadata=SimpleNamespace(
+                prompt_token_count=10,
+                candidates_token_count=20,
+                total_token_count=30,
             ),
+        )
+
+
+class KoreanOnlyOperationModel:
+    def __init__(self):
+        self.calls = 0
+
+    def generate_content(self, _prompt, generation_config=None):
+        del generation_config
+        self.calls += 1
+        if self.calls == 1:
+            payload = {
+                "actions": [
+                    {
+                        "id": "R1",
+                        "instruction": "Use declarative Korean style.",
+                        "kind": "style",
+                        "languages": ["ko"],
+                        "requires_research": False,
+                        "must_include": {"en": [], "ko": ["본문이다"]},
+                        "must_exclude": {"en": [], "ko": []},
+                    }
+                ],
+                "search_queries_en": [],
+            }
+        else:
+            payload = {
+                "operations": [
+                    {
+                        "action_ids": ["R1"],
+                        "operation": "replace_block",
+                        "target": "section_1.block_1",
+                        "content": "수정된 한국어 본문이다. " * 100,
+                    }
+                ],
+                "applied": ["R1"],
+                "unresolved": [],
+            }
+        return SimpleNamespace(
+            text=json.dumps(payload, ensure_ascii=False),
+            usage_metadata=SimpleNamespace(
+                prompt_token_count=10,
+                candidates_token_count=20,
+                total_token_count=30,
+            ),
+        )
+
+
+class PromptAwarePreservationModel:
+    def __init__(self):
+        self.calls = 0
+
+    def generate_content(self, prompt, generation_config=None):
+        del generation_config
+        self.calls += 1
+        if self.calls == 1:
+            payload = {
+                "actions": [
+                    {
+                        "id": "R1",
+                        "instruction": "Add formation context.",
+                        "kind": "enrich",
+                        "languages": ["en"],
+                        "requires_research": False,
+                        "must_include": {"en": ["New formation context"], "ko": []},
+                        "must_exclude": {"en": [], "ko": []},
+                    },
+                    {
+                        "id": "R2",
+                        "instruction": "Use neutral wording.",
+                        "kind": "style",
+                        "languages": ["en"],
+                        "requires_research": False,
+                        "must_include": {"en": ["Neutral English body"], "ko": []},
+                        "must_exclude": {"en": [], "ko": []},
+                    },
+                ],
+                "search_queries_en": [],
+            }
+        elif "replace_block" in prompt:
+            payload = {
+                "operations": [
+                    {
+                        "action_ids": ["R1"],
+                        "operation": "insert_after",
+                        "target": "section_1",
+                        "content": "## Formation Context\n\nNew formation context.",
+                    },
+                    {
+                        "action_ids": ["R2"],
+                        "operation": "replace_block",
+                        "target": "section_1.block_1",
+                        "content": "Neutral English body. " * 260,
+                    },
+                ],
+                "applied": ["R1", "R2"],
+                "unresolved": [],
+            }
+        elif "replace_text" in prompt:
+            payload = {
+                "operations": [
+                    {
+                        "action_ids": ["R1"],
+                        "operation": "insert_after",
+                        "target": "section_1",
+                        "content": "## Formation Context\n\nNew formation context.",
+                    },
+                    {
+                        "action_ids": ["R2"],
+                        "operation": "replace_text",
+                        "target": "section_1",
+                        "old_text": "This sentence does not exist in the source.",
+                        "content": "Neutral English body.",
+                    },
+                ],
+                "applied": ["R1", "R2"],
+                "unresolved": [],
+            }
+        else:
+            raise AssertionError("Revision prompt is missing a supported safe edit operation")
+        return SimpleNamespace(
+            text=json.dumps(payload, ensure_ascii=False),
             usage_metadata=SimpleNamespace(
                 prompt_token_count=10,
                 candidates_token_count=20,
@@ -123,6 +317,280 @@ class AlwaysShortModel:
 
 
 class RevisePostTests(unittest.TestCase):
+    def setUp(self):
+        patcher = patch.object(revise_post, "call_gemini", side_effect=immediate_gemini_call)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_replace_block_does_not_require_echoing_source_text(self):
+        plan = {
+            "actions": [
+                {
+                    "id": "R1",
+                    "kind": "style",
+                    "languages": ["en"],
+                    "must_include": {"en": ["Neutral sentence."]},
+                    "must_exclude": {"en": [], "ko": []},
+                }
+            ]
+        }
+        payload = {
+            "operations": [
+                {
+                    "action_ids": ["R1"],
+                    "operation": "replace_block",
+                    "target": "section_1.block_1",
+                    "content": "Neutral sentence.",
+                }
+            ],
+            "applied": ["R1"],
+            "unresolved": [],
+        }
+
+        revised = revise_post.apply_section_operations(
+            "## Section\n\nFirst sentence.\nSecond sentence.", payload, plan, "en"
+        )
+
+        self.assertIn("Neutral sentence.", revised)
+
+    def test_style_examples_are_not_required_literal_output(self):
+        plan = {
+            "actions": [
+                {
+                    "id": "R1",
+                    "kind": "style",
+                    "languages": ["ko"],
+                    "must_include": {"en": [], "ko": ["시작되었다"]},
+                    "must_exclude": {"en": [], "ko": ["태양계"]},
+                }
+            ]
+        }
+        payload = {
+            "operations": [
+                {
+                    "action_ids": ["R1"],
+                    "operation": "replace_block",
+                    "target": "section_1.block_1",
+                    "content": "태양계 형성은 중력 붕괴로 시작됐다.",
+                }
+            ],
+            "applied": ["R1"],
+            "unresolved": [],
+        }
+
+        revised = revise_post.apply_section_operations(
+            "## 태양계 형성\n\n태양계 형성은 중력 붕괴로 시작되었어요.", payload, plan, "ko"
+        )
+
+        self.assertIn("시작됐다", revised)
+
+    def test_model_generated_enrichment_phrase_is_not_a_literal_requirement(self):
+        plan = {
+            "actions": [
+                {
+                    "id": "R1",
+                    "kind": "enrich",
+                    "languages": ["en"],
+                    "must_include": {"en": ["protostar formation"], "ko": []},
+                    "must_exclude": {"en": [], "ko": []},
+                }
+            ]
+        }
+        payload = {
+            "operations": [
+                {
+                    "action_ids": ["R1"],
+                    "operation": "insert_after",
+                    "target": "section_1",
+                    "content": "## Protosun\n\nA protosun forms as the collapsing cloud heats up.",
+                }
+            ],
+            "applied": ["R1"],
+            "unresolved": [],
+        }
+
+        revised = revise_post.apply_section_operations(
+            "## Solar Nebula\n\nGravity collapses the cloud.", payload, plan, "en"
+        )
+
+        self.assertIn("A protosun forms", revised)
+
+    def test_revision_accepts_valid_article_after_requested_style_reduction(self):
+        en_front_matter, original_en = revise_post.split_front_matter(post("en", "style-123"))
+        ko_front_matter, original_ko = revise_post.split_front_matter(post("ko", "style-123"))
+        revised_en = (
+            "## Introduction\n\n"
+            + ("Neutral technical explanation. " * 170)
+            + "\n\n## Details\n\n"
+            + ("Additional explanation. " * 80)
+        )
+        plan = {
+            "actions": [
+                {
+                    "id": "R1",
+                    "kind": "style",
+                    "languages": ["en"],
+                    "must_include": {"en": [], "ko": []},
+                    "must_exclude": {"en": [], "ko": []},
+                }
+            ]
+        }
+
+        with patch.object(revise_post, "request_language_revision", return_value=revised_en):
+            revised = revise_post.request_revision(
+                object(),
+                SimpleNamespace(),
+                {"en": original_en, "ko": original_ko},
+                {"en": en_front_matter, "ko": ko_front_matter},
+                plan,
+                "",
+            )
+
+        self.assertEqual(revised_en, revised["en"])
+
+    def test_apply_revision_applies_review_as_section_operations(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            post_id = "solar-123"
+            (root / "_posts" / "ko").mkdir(parents=True)
+            (root / "_posts" / "en").mkdir(parents=True)
+            ko_path = root / "_posts" / "ko" / "post.md"
+            en_path = root / "_posts" / "en" / "post.md"
+            ko_path.write_text(
+                post("ko", post_id).replace(
+                    "\n\n## 소개", "\n\n우리 친구들, 아빠가 설명해요.\n\n## 소개"
+                ).replace("## ", "### "),
+                encoding="utf-8",
+            )
+            en_path.write_text(
+                post("en", post_id).replace(
+                    "\n\n## Introduction", "\n\nHey kids, dad will explain.\n\n## Introduction"
+                ).replace("## ", "### "),
+                encoding="utf-8",
+            )
+            review = ReviewRequest(
+                path=root / "_reviews" / "pending" / "request.md",
+                target_post_id=post_id,
+                instructions=[
+                    "아이 대상 서문과 아빠 표현을 삭제한다.",
+                    "원시 태양 형성 과정을 보강한다.",
+                    "존댓말을 평서체로 변경한다.",
+                ],
+            )
+            model = SectionOperationModel()
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                research = (
+                    "Title: NASA Protosun Formation\nSummary\nLink: https://science.nasa.gov/protosun\n\n"
+                    "Title: Stellar Formation Study\nSummary\nDOI Link: https://doi.org/10.1234/example"
+                )
+                with patch.object(
+                    revise_post, "collect_review_research", return_value=research
+                ) as research_mock:
+                    apply_revision(
+                        review,
+                        model,
+                        SimpleNamespace(
+                            record_attempt=lambda _stage: None,
+                            record_success=lambda _stage, _response: None,
+                        ),
+                    )
+                self.assertEqual(
+                    ["protosun formation hydrogen fusion"],
+                    research_mock.call_args.args[3],
+                )
+                ko_text = ko_path.read_text(encoding="utf-8")
+                en_text = en_path.read_text(encoding="utf-8")
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertEqual(3, model.calls)
+        self.assertNotIn("우리 친구들", ko_text)
+        self.assertNotIn("아빠", ko_text)
+        self.assertIn("수소 핵융합", ko_text)
+        self.assertIn("추가 설명이다", ko_text)
+        self.assertNotIn("Hey kids", en_text)
+        self.assertIn("hydrogen fusion", en_text.lower())
+        self.assertIn("Additional explanation", en_text)
+        self.assertIn("## References", en_text)
+        self.assertIn("## 참고자료", ko_text)
+        self.assertIn("https://science.nasa.gov/protosun", en_text)
+        self.assertGreaterEqual(en_text.count("\n## "), 2)
+        self.assertGreaterEqual(ko_text.count("\n## "), 2)
+
+    def test_apply_revision_skips_language_without_actions(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            post_id = "ko-only-123"
+            (root / "_posts" / "ko").mkdir(parents=True)
+            (root / "_posts" / "en").mkdir(parents=True)
+            ko_path = root / "_posts" / "ko" / "post.md"
+            en_path = root / "_posts" / "en" / "post.md"
+            ko_path.write_text(post("ko", post_id), encoding="utf-8")
+            en_path.write_text(post("en", post_id), encoding="utf-8")
+            before_en = en_path.read_text(encoding="utf-8")
+            review = ReviewRequest(
+                path=root / "_reviews" / "pending" / "request.md",
+                target_post_id=post_id,
+                scope="ko",
+                instructions=["한국어 문체만 평서체로 변경한다."],
+            )
+            model = KoreanOnlyOperationModel()
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                apply_revision(
+                    review,
+                    model,
+                    SimpleNamespace(
+                        record_attempt=lambda _stage: None,
+                        record_success=lambda _stage, _response: None,
+                    ),
+                )
+                after_en = en_path.read_text(encoding="utf-8")
+                after_ko = ko_path.read_text(encoding="utf-8")
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertEqual(2, model.calls)
+        self.assertEqual(before_en, after_en)
+        self.assertIn("수정된 한국어 본문이다", after_ko)
+
+    def test_style_and_enrichment_preserve_the_existing_article(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            post_id = "preserve-123"
+            (root / "_posts" / "ko").mkdir(parents=True)
+            (root / "_posts" / "en").mkdir(parents=True)
+            ko_path = root / "_posts" / "ko" / "post.md"
+            en_path = root / "_posts" / "en" / "post.md"
+            ko_path.write_text(post("ko", post_id), encoding="utf-8")
+            en_path.write_text(post("en", post_id), encoding="utf-8")
+            review = ReviewRequest(
+                path=root / "_reviews" / "pending" / "request.md",
+                target_post_id=post_id,
+                instructions=["설명을 보강한다.", "중립적인 문체로 바꾼다."],
+            )
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                apply_revision(
+                    review,
+                    PromptAwarePreservationModel(),
+                    SimpleNamespace(
+                        record_attempt=lambda _stage: None,
+                        record_success=lambda _stage, _response: None,
+                    ),
+                )
+                revised = en_path.read_text(encoding="utf-8")
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertIn("New formation context", revised)
+        self.assertGreater(revised.count("Neutral English body."), 200)
+        self.assertIn("Additional explanation.", revised)
+
     def test_parse_and_discover_ready_review(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -209,7 +677,7 @@ status: ready
         self.assertTrue(is_placeholder_post_id("replace-with-real-post-id"))
         self.assertEqual([], discovered)
 
-    def test_apply_revision_updates_paired_posts(self):
+    def test_apply_revision_preserves_posts_when_operations_are_incomplete(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             post_id = "paired-123"
@@ -224,121 +692,80 @@ status: ready
                 target_post_id=post_id,
                 instructions=["Add one paragraph."],
             )
+            review.path.parent.mkdir(parents=True)
+            review.path.write_text("ready", encoding="utf-8")
+            before_ko = ko_path.read_text(encoding="utf-8")
+            before_en = en_path.read_text(encoding="utf-8")
+            model = IncompleteOperationModel()
             original_cwd = Path.cwd()
             try:
                 os.chdir(root)
                 with patch.object(revise_post, "collect_review_research", return_value=""):
-                    changed = apply_revision(review, FakeModel(), SimpleNamespace(
-                        record_attempt=lambda _stage: None,
-                        record_success=lambda _stage, _response: None,
-                    ))
-                self.assertIn("_posts/ko/post.md", {Path(path).as_posix() for path in changed})
-                self.assertIn("수정된 한국어", ko_path.read_text(encoding="utf-8"))
-                self.assertIn("Revised English", en_path.read_text(encoding="utf-8"))
-                self.assertTrue((root / "_knowledge" / "concepts" / "topic.md").exists())
-            finally:
-                os.chdir(original_cwd)
-
-    def test_apply_revision_repairs_short_model_response_before_writing(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            post_id = "paired-123"
-            (root / "_posts" / "ko").mkdir(parents=True)
-            (root / "_posts" / "en").mkdir(parents=True)
-            ko_path = root / "_posts" / "ko" / "post.md"
-            en_path = root / "_posts" / "en" / "post.md"
-            ko_path.write_text(post("ko", post_id), encoding="utf-8")
-            en_path.write_text(post("en", post_id), encoding="utf-8")
-            review = ReviewRequest(
-                path=root / "_reviews" / "pending" / "request.md",
-                target_post_id=post_id,
-                instructions=["Add one paragraph."],
-            )
-            model = ShortThenFullModel()
-            original_cwd = Path.cwd()
-            try:
-                os.chdir(root)
-                with patch.object(revise_post, "collect_review_research", return_value=""):
-                    with contextlib.redirect_stdout(io.StringIO()):
-                        changed = apply_revision(review, model, SimpleNamespace(
+                    with self.assertRaisesRegex(ValueError, "Operations for en must cover"):
+                        apply_revision(review, model, SimpleNamespace(
                             record_attempt=lambda _stage: None,
                             record_success=lambda _stage, _response: None,
                         ))
                 self.assertEqual(2, model.calls)
-                self.assertIn("_posts/en/post.md", {Path(path).as_posix() for path in changed})
-                self.assertIn("Revised English", en_path.read_text(encoding="utf-8"))
+                self.assertEqual(before_ko, ko_path.read_text(encoding="utf-8"))
+                self.assertEqual(before_en, en_path.read_text(encoding="utf-8"))
+                self.assertTrue(review.path.exists())
             finally:
                 os.chdir(original_cwd)
 
-    def test_apply_revision_falls_back_to_append_only_enrichment(self):
+    def test_apply_revision_validates_both_languages_before_writing_either(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
-            post_id = "paired-123"
+            post_id = "atomic-123"
             (root / "_posts" / "ko").mkdir(parents=True)
             (root / "_posts" / "en").mkdir(parents=True)
             ko_path = root / "_posts" / "ko" / "post.md"
             en_path = root / "_posts" / "en" / "post.md"
-            ko_path.write_text(post("ko", post_id), encoding="utf-8")
-            en_path.write_text(post("en", post_id), encoding="utf-8")
+            ko_path.write_text(
+                post("ko", post_id).replace(
+                    "\n\n## 소개", "\n\n우리 친구들, 아빠가 설명해요.\n\n## 소개"
+                ),
+                encoding="utf-8",
+            )
+            en_path.write_text(
+                post("en", post_id).replace(
+                    "\n\n## Introduction", "\n\nHey kids, dad will explain.\n\n## Introduction"
+                ),
+                encoding="utf-8",
+            )
+            before_ko = ko_path.read_text(encoding="utf-8")
+            before_en = en_path.read_text(encoding="utf-8")
             review = ReviewRequest(
                 path=root / "_reviews" / "pending" / "request.md",
                 target_post_id=post_id,
-                instructions=["Add one paragraph."],
+                instructions=[
+                    "아이 대상 서문과 아빠 표현을 삭제한다.",
+                    "원시 태양 형성 과정을 보강한다.",
+                    "존댓말을 평서체로 변경한다.",
+                ],
             )
-            model = AlwaysShortModel()
             original_cwd = Path.cwd()
             try:
                 os.chdir(root)
                 with patch.object(revise_post, "collect_review_research", return_value=""):
-                    with contextlib.redirect_stdout(io.StringIO()):
-                        changed = apply_revision(review, model, SimpleNamespace(
-                            record_attempt=lambda _stage: None,
-                            record_success=lambda _stage, _response: None,
-                        ))
-                self.assertEqual(2, model.calls)
-                self.assertIn("_posts/ko/post.md", {Path(path).as_posix() for path in changed})
-                self.assertIn("## Additional Review Notes", en_path.read_text(encoding="utf-8"))
-                self.assertIn("Short additional note.", en_path.read_text(encoding="utf-8"))
-                self.assertIn("## 추가 보강", ko_path.read_text(encoding="utf-8"))
+                    with patch.object(
+                        revise_post,
+                        "validate_revised_body",
+                        side_effect=[None, revise_post.ContentValidationError("ko", ["forced"])],
+                    ):
+                        with self.assertRaises(revise_post.ContentValidationError):
+                            apply_revision(
+                                review,
+                                SectionOperationModel(),
+                                SimpleNamespace(
+                                    record_attempt=lambda _stage: None,
+                                    record_success=lambda _stage, _response: None,
+                                ),
+                            )
+                self.assertEqual(before_ko, ko_path.read_text(encoding="utf-8"))
+                self.assertEqual(before_en, en_path.read_text(encoding="utf-8"))
             finally:
                 os.chdir(original_cwd)
-
-    def test_apply_revision_normalizes_legacy_h3_sections(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            post_id = "legacy-123"
-            (root / "_posts" / "ko").mkdir(parents=True)
-            (root / "_posts" / "en").mkdir(parents=True)
-            ko_path = root / "_posts" / "ko" / "post.md"
-            en_path = root / "_posts" / "en" / "post.md"
-            ko_path.write_text(post("ko", post_id).replace("## ", "### "), encoding="utf-8")
-            en_path.write_text(post("en", post_id).replace("## ", "### "), encoding="utf-8")
-            review = ReviewRequest(
-                path=root / "_reviews" / "pending" / "request.md",
-                target_post_id=post_id,
-                instructions=["Enrich the existing article."],
-            )
-            model = AlwaysShortModel()
-            original_cwd = Path.cwd()
-            try:
-                os.chdir(root)
-                with patch.object(revise_post, "collect_review_research", return_value=""):
-                    with contextlib.redirect_stdout(io.StringIO()):
-                        apply_revision(
-                            review,
-                            model,
-                            SimpleNamespace(
-                                record_attempt=lambda _stage: None,
-                                record_success=lambda _stage, _response: None,
-                            ),
-                        )
-                en_text = en_path.read_text(encoding="utf-8")
-                ko_text = ko_path.read_text(encoding="utf-8")
-            finally:
-                os.chdir(original_cwd)
-
-        self.assertGreaterEqual(en_text.count("\n## "), 2)
-        self.assertGreaterEqual(ko_text.count("\n## "), 2)
 
     def test_find_posts_accepts_unique_post_id_suffix(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -436,6 +863,31 @@ status: ready
         self.assertFalse(pending_exists)
         self.assertFalse(deleted_full_path.exists())
         self.assertFalse(completed_dir_exists)
+
+    def test_main_keeps_ready_review_when_revision_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            review_path = root / "_reviews" / "pending" / "request.md"
+            review_path.parent.mkdir(parents=True)
+            review_path.write_text("ready", encoding="utf-8")
+            review = ReviewRequest(
+                path=Path("_reviews/pending/request.md"),
+                target_post_id="paired-123",
+                instructions=["Add concrete evidence."],
+            )
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key", "REVIEW_FILTER": ""}):
+                    with patch.object(revise_post, "discover_ready_reviews", return_value=[review]):
+                        with patch.object(revise_post, "apply_revision", side_effect=ValueError("invalid edit")):
+                            with self.assertRaisesRegex(ValueError, "invalid edit"):
+                                revise_post.main([])
+                review_exists = review_path.exists()
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertTrue(review_exists)
 
 
 if __name__ == "__main__":

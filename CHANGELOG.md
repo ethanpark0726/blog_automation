@@ -1,5 +1,75 @@
 # Changelog
 
+## [1.21.6] — 2026-07-21
+
+### Fixed
+- **Semantic Enrichment Validation**: Removed AI-generated literal include/exclude criteria that rejected equivalent terminology such as `protostar formation` and `a protosun forms`.
+
+### Changed
+- **Smaller Revision Plans**: Revision plans no longer generate unused literal criteria, reducing Gemini plan output while retaining action coverage, operation safety, content quality, heading preservation, and atomic-write validation.
+
+---
+
+## [1.21.5] — 2026-07-21
+
+### Fixed
+- **Semantic Style Criteria**: Style examples such as `시작되었다` are no longer enforced as literal required output. Literal criteria remain enforced for factual enrichment, replacement, and deletion actions.
+- **Planner Guidance**: Style actions now explicitly leave literal include/exclude criteria empty, preventing broad tone examples from rejecting otherwise valid revisions.
+
+---
+
+## [1.21.4] — 2026-07-21
+
+### Fixed
+- **Stable Revision Targets**: Replaced fragile model-generated source-text matching with code-generated Markdown block IDs such as `section_1.block_1`.
+
+### Changed
+- **Smaller Revision Responses**: Style operations return only replacement block content instead of duplicating both the old and new text in Gemini output.
+
+---
+
+## [1.21.3] — 2026-07-21
+
+### Fixed
+- **Valid Style Reduction**: Removed the legacy 70% original-length comparison that rejected valid articles after requested tone cleanup. Absolute content, heading, action-coverage, and section-operation safety checks remain enforced.
+- **Revision Regression Coverage**: Added the previously missing case where a revised English article remains above the 450-word floor but is intentionally shorter after style cleanup.
+
+---
+
+## [1.21.2] — 2026-07-21
+
+### Fixed
+- **Markdown Text Matching**: Targeted revision edits now tolerate equivalent spaces and line breaks while still rejecting different text.
+
+### Changed
+- **Revision Token Usage**: Korean revision calls no longer receive the full revised English article because the shared plan and research context already provide the required alignment.
+
+---
+
+## [1.21.1] — 2026-07-21
+
+### Fixed
+- **Revision Content Preservation**: Style actions now use exact text replacement and enrichment actions use text replacement or insertion, preventing Gemini from shortening an entire section while applying a small review request.
+
+---
+
+## [1.21.0] — 2026-07-21
+
+### Added
+- **Tracked Revision Plan**: Every numbered review instruction is converted into a validated action with language scope, acceptance criteria, and optional English research queries.
+- **Section Operation Engine**: Gemini returns targeted delete, replace, and insert operations against stable Markdown section IDs instead of returning replacement KO/EN articles.
+- **Revision Diagnostics**: Successful Gemini calls now log output-token counts and finish reasons, while revision stages log planned actions and applied or unresolved action IDs.
+
+### Changed
+- **Language-Specific Revision**: English and Korean are revised and validated independently, and a language with no applicable review action is left byte-for-byte unchanged.
+- **Reference Handling**: Research references are extracted and appended deterministically only to languages changed by factual enrichment.
+
+### Fixed
+- **Atomic Revision Failure**: Missing, unresolved, invalid, or no-op section operations now abort before either post is written, preserving the ready review note for retry.
+- **Solar Revision Recovery**: Removed the incomplete append-only fallback output from the Solar System post pair and restored its ready review note for Revision Engine v2 testing.
+
+---
+
 ## [1.20.8] — 2026-07-21
 
 ### Fixed
