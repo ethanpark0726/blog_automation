@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.21.5] — 2026-07-21
+
+### Fixed
+- **Semantic Style Criteria**: Style examples such as `시작되었다` are no longer enforced as literal required output. Literal criteria remain enforced for factual enrichment, replacement, and deletion actions.
+- **Planner Guidance**: Style actions now explicitly leave literal include/exclude criteria empty, preventing broad tone examples from rejecting otherwise valid revisions.
+
+---
+
 ## [1.21.4] — 2026-07-21
 
 ### Fixed

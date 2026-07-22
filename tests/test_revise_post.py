@@ -353,6 +353,37 @@ class RevisePostTests(unittest.TestCase):
 
         self.assertIn("Neutral sentence.", revised)
 
+    def test_style_examples_are_not_required_literal_output(self):
+        plan = {
+            "actions": [
+                {
+                    "id": "R1",
+                    "kind": "style",
+                    "languages": ["ko"],
+                    "must_include": {"en": [], "ko": ["시작되었다"]},
+                    "must_exclude": {"en": [], "ko": ["태양계"]},
+                }
+            ]
+        }
+        payload = {
+            "operations": [
+                {
+                    "action_ids": ["R1"],
+                    "operation": "replace_block",
+                    "target": "section_1.block_1",
+                    "content": "태양계 형성은 중력 붕괴로 시작됐다.",
+                }
+            ],
+            "applied": ["R1"],
+            "unresolved": [],
+        }
+
+        revised = revise_post.apply_section_operations(
+            "## 태양계 형성\n\n태양계 형성은 중력 붕괴로 시작되었어요.", payload, plan, "ko"
+        )
+
+        self.assertIn("시작됐다", revised)
+
     def test_revision_accepts_valid_article_after_requested_style_reduction(self):
         en_front_matter, original_en = revise_post.split_front_matter(post("en", "style-123"))
         ko_front_matter, original_ko = revise_post.split_front_matter(post("ko", "style-123"))

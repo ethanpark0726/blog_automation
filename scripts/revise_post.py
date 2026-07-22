@@ -400,6 +400,7 @@ Kinds: delete, replace, enrich, style.
 Set requires_research only when new factual content is requested.
 Create short English search queries only for factual enrichment.
 Create literal must_include and must_exclude checks when the instruction names required or forbidden wording.
+Leave must_include and must_exclude empty for semantic style actions.
 
 Return JSON only:
 {{
@@ -562,6 +563,10 @@ def plan_criteria(plan: dict[str, Any], field_name: str, lang: str) -> list[str]
     values = []
     for action in plan["actions"]:
         if lang not in action["languages"]:
+            continue
+        if action.get("kind") == "style":
+            continue
+        if field_name == "must_include" and action.get("kind") == "delete":
             continue
         lang_values = (action.get(field_name) or {}).get(lang) or []
         values.extend(str(value).strip() for value in lang_values if str(value).strip())
