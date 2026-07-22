@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
-from content_quality import ContentValidationError, validate_post
+from content_quality import ContentValidationError, append_references, validate_post
 from content_quality import build_search_queries, extract_references, is_usable_search_result
 from gemini_runtime import UsageTracker, call_gemini
 from generate_knowledge_notes import generate_knowledge_notes
@@ -21,8 +21,16 @@ from generate_knowledge_notes import generate_knowledge_notes
 
 DEFAULT_REVIEW_DIR = Path("_reviews/pending")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "").strip() or "gemini-3.1-flash-lite"
-REVISION_CONFIG = {"temperature": 0.2, "max_output_tokens": 16384}
-MAX_REVISION_ATTEMPTS = 2
+REVISION_PLAN_CONFIG = {
+    "temperature": 0.1,
+    "max_output_tokens": 4096,
+    "response_mime_type": "application/json",
+}
+REVISION_EDIT_CONFIG = {
+    "temperature": 0.2,
+    "max_output_tokens": 16384,
+    "response_mime_type": "application/json",
+}
 MIN_REVISION_WORD_RETENTION = 0.70
 MIN_REVISION_CHAR_RETENTION = 0.70
 PLACEHOLDER_POST_IDS = {"", "replace-with-real-post-id"}
@@ -245,10 +253,13 @@ def front_matter_title(front_matter: str) -> str:
 
 
 def collect_review_research(
-    review: ReviewRequest, bodies: dict[str, str], front_matters: dict[str, str] | None = None
+    review: ReviewRequest,
+    bodies: dict[str, str],
+    front_matters: dict[str, str] | None = None,
+    search_queries: list[str] | None = None,
 ) -> str:
     """Collect lightweight English facts for review-driven enrichment."""
-    seeds = []
+    seeds = list(search_queries or [])
     instruction_text = " ".join(review.instructions)
     if instruction_text:
         seeds.extend(build_search_queries(instruction_text, limit=4))
@@ -292,119 +303,199 @@ def collect_review_research(
     return combined
 
 
-def revision_prompt(review: ReviewRequest, posts: dict[str, str], research_facts: str) -> str:
-    instructions = "\n".join(f"- {item}" for item in review.instructions)
-    research_block = research_facts.strip() or "No additional external facts were collected. Use only the existing post."
-    return f"""
-You are enriching an already-published bilingual blog post from an Obsidian review note.
-
-Primary goal:
-- Preserve the existing article's structure, voice, useful explanations, code blocks, tables, diagrams, and references.
-- Add or adjust only what is necessary to satisfy the review note.
-- Treat this as minimal enrichment, not a fresh rewrite.
-
-Rules:
-1. Apply the requested changes to both Korean and English when scope is bilingual.
-2. Use the review research facts when they are relevant; do not invent facts beyond the existing post and provided research.
-3. Return the complete revised body for each language, not a summary, excerpt, diff, or only the changed paragraph.
-4. Preserve the existing Markdown style, headings, tables, code blocks, and references unless the review explicitly asks to remove or change them.
-5. Prefer inserting or lightly editing paragraphs over rewriting the whole article.
-6. Keep at least two level-2 headings in each body.
-7. The English body must remain at least 450 words. The Korean body must remain at least 1,200 characters.
-8. Preserve front matter exactly outside the body. Return body content only.
-
-Review scope: {review.scope}
-Review instructions:
-{instructions}
-
-Review research facts:
----
-{research_block}
----
-
-Current Korean body:
----
-{posts.get("ko", "")}
----
-
-Current English body:
----
-{posts.get("en", "")}
----
-
-Return JSON only:
-{{
-  "ko": "complete revised Korean body",
-  "en": "complete revised English body"
-}}
-"""
-
-
-def revision_retry_prompt(
-    review: ReviewRequest,
-    posts: dict[str, str],
-    research_facts: str,
-    previous_response: dict[str, str],
-    errors: dict[str, list[str]],
-) -> str:
-    formatted_errors = "\n".join(
-        f"- {lang}: {'; '.join(messages)}" for lang, messages in sorted(errors.items())
-    )
-    return f"""
-The previous revision response failed local validation.
-
-Validation errors:
-{formatted_errors}
-
-You must return JSON only with complete full revised bodies for both languages.
-Do not return only the changed section. Do not summarize. Do not omit existing sections.
-Preserve the existing article as much as possible; this is a minimal enrichment task, not a fresh rewrite.
-The English body must be at least 450 words and the Korean body must be at least 1,200 characters.
-
-Review research facts:
----
-{research_facts.strip() or "No additional external facts were collected. Use only the existing post."}
----
-
-Original Korean body:
----
-{posts.get("ko", "")}
----
-
-Original English body:
----
-{posts.get("en", "")}
----
-
-Previous invalid Korean response:
----
-{previous_response.get("ko", "")}
----
-
-Previous invalid English response:
----
-{previous_response.get("en", "")}
----
-
-Review scope: {review.scope}
-Review instructions:
-{chr(10).join(f"- {item}" for item in review.instructions)}
-
-Return JSON only:
-{{
-  "ko": "complete revised Korean body",
-  "en": "complete revised English body"
-}}
-"""
-
-
-def parse_revision_response(raw: str) -> dict[str, str]:
+def parse_json_response(raw: str) -> dict[str, Any]:
     cleaned = raw.strip()
     if cleaned.startswith("```"):
         cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
         cleaned = re.sub(r"\s*```$", "", cleaned)
     payload = json.loads(cleaned)
-    return {lang: str(payload.get(lang) or "").strip() for lang in ("ko", "en")}
+    if not isinstance(payload, dict):
+        raise ValueError("Gemini response must be a JSON object")
+    return payload
+
+
+def split_markdown_sections(body: str) -> list[dict[str, str]]:
+    """Split a post body into a preamble and stable H2 section IDs."""
+    sections = [{"id": "preamble", "content": ""}]
+    fence = ""
+    section_index = 0
+    for line in body.strip().splitlines():
+        marker = line.strip()[:3]
+        if marker in {"```", "~~~"}:
+            fence = "" if fence == marker else marker if not fence else fence
+        if not fence and re.match(r"^##\s+", line):
+            section_index += 1
+            sections.append({"id": f"section_{section_index}", "content": line})
+        else:
+            sections[-1]["content"] += ("\n" if sections[-1]["content"] else "") + line
+    return sections
+
+
+def section_catalog(body: str) -> str:
+    catalog = []
+    for section in split_markdown_sections(body):
+        first_line = section["content"].splitlines()[0] if section["content"] else "(empty)"
+        catalog.append(f"- {section['id']}: {first_line}")
+    return "\n".join(catalog)
+
+
+def revision_plan_prompt(review: ReviewRequest, bodies: dict[str, str]) -> str:
+    instructions = "\n".join(
+        f"R{index}: {instruction}" for index, instruction in enumerate(review.instructions, 1)
+    )
+    return f"""
+Convert this Obsidian Review Note into a deterministic bilingual edit plan.
+
+Review scope: {review.scope}
+Instructions:
+{instructions}
+
+Korean section catalog:
+{section_catalog(bodies['ko'])}
+
+English section catalog:
+{section_catalog(bodies['en'])}
+
+For each instruction return one action with the same R-number.
+Kinds: delete, replace, enrich, style.
+Set requires_research only when new factual content is requested.
+Create short English search queries only for factual enrichment.
+Create literal must_include and must_exclude checks when the instruction names required or forbidden wording.
+
+Return JSON only:
+{{
+  "actions": [
+    {{
+      "id": "R1",
+      "instruction": "original instruction",
+      "kind": "delete|replace|enrich|style",
+      "languages": ["en", "ko"],
+      "requires_research": false,
+      "must_include": {{"en": [], "ko": []}},
+      "must_exclude": {{"en": [], "ko": []}}
+    }}
+  ],
+  "search_queries_en": []
+}}
+"""
+
+
+def validate_revision_plan(review: ReviewRequest, payload: dict[str, Any]) -> dict[str, Any]:
+    actions = payload.get("actions")
+    if not isinstance(actions, list):
+        raise ValueError("Revision plan is missing actions")
+    expected = {f"R{index}" for index in range(1, len(review.instructions) + 1)}
+    actual = {str(action.get("id") or "") for action in actions if isinstance(action, dict)}
+    if actual != expected:
+        raise ValueError(f"Revision plan action IDs must be {sorted(expected)}; received {sorted(actual)}")
+    allowed_kinds = {"delete", "replace", "enrich", "style"}
+    for action in actions:
+        if action.get("kind") not in allowed_kinds:
+            raise ValueError(f"Unsupported revision action kind: {action.get('kind')}")
+        languages = action.get("languages")
+        if not isinstance(languages, list) or not languages or not set(languages) <= {"en", "ko"}:
+            raise ValueError(f"Revision action {action['id']} has invalid languages")
+        for field_name in ("must_include", "must_exclude"):
+            values = action.get(field_name) or {}
+            if not isinstance(values, dict):
+                raise ValueError(f"Revision action {action['id']} has invalid {field_name}")
+            for lang in ("en", "ko"):
+                if not isinstance(values.get(lang, []), list):
+                    raise ValueError(
+                        f"Revision action {action['id']} has invalid {field_name}.{lang}"
+                    )
+    queries = payload.get("search_queries_en") or []
+    if not isinstance(queries, list):
+        raise ValueError("Revision plan search_queries_en must be a list")
+    if any(action.get("requires_research") for action in actions) and not queries:
+        raise ValueError("Factual revision actions require at least one English search query")
+    payload["search_queries_en"] = [
+        str(query).strip()
+        for query in queries
+        if str(query).strip() and re.search(r"[A-Za-z]", str(query))
+    ][:5]
+    if any(action.get("requires_research") for action in actions) and not payload["search_queries_en"]:
+        raise ValueError("Factual revision actions require usable English search queries")
+    return payload
+
+
+def create_revision_plan(
+    review: ReviewRequest,
+    bodies: dict[str, str],
+    model: GeminiModelAdapter,
+    tracker: UsageTracker,
+) -> dict[str, Any]:
+    raw = call_gemini(
+        model,
+        revision_plan_prompt(review, bodies),
+        "revision_plan",
+        tracker,
+        generation_config=REVISION_PLAN_CONFIG,
+    )
+    plan = validate_revision_plan(review, parse_json_response(raw))
+    summary = ", ".join(
+        f"{action['id']}:{action['kind']}[{','.join(action['languages'])}]"
+        for action in plan["actions"]
+    )
+    print(f"[RevisionPlan] Actions: {summary}")
+    print(f"[RevisionPlan] English search queries: {plan['search_queries_en']}")
+    return plan
+
+
+def language_edit_prompt(
+    lang: str,
+    body: str,
+    plan: dict[str, Any],
+    research_facts: str,
+    revised_english: str = "",
+) -> str:
+    language = "Korean" if lang == "ko" else "English"
+    canonical = (
+        f"\nValidated revised English article for semantic alignment:\n---\n{revised_english}\n---\n"
+        if lang == "ko"
+        else ""
+    )
+    language_plan = {
+        **plan,
+        "actions": [action for action in plan["actions"] if lang in action["languages"]],
+    }
+    return f"""
+Apply the structured Review Note plan to this existing {language} Markdown article.
+Return only operations for sections that must change. Unmentioned sections will be preserved by code.
+
+Rules:
+1. Targets are preamble, section_1, section_2, and so on from the catalog.
+2. replace content must contain the complete replacement block, including its ## heading for a section.
+3. delete removes the target block. insert_after adds a complete new block after the target.
+4. Preserve facts, tables, Mermaid diagrams, code blocks, headings, and references unless an action changes them.
+5. Every action ID must appear in applied or unresolved. Do not claim applied unless its operation is present.
+6. Use declarative Korean endings such as ~이다/~했다 when the plan requests a neutral style.
+{canonical}
+Plan:
+{json.dumps(language_plan, ensure_ascii=False)}
+
+Research facts:
+---
+{research_facts.strip() or "No additional research was required."}
+---
+
+Section catalog:
+{section_catalog(body)}
+
+Current body:
+---
+{body}
+---
+
+Return JSON only:
+{{
+  "operations": [
+    {{"action_ids": ["R1"], "operation": "replace|delete|insert_after", "target": "preamble|section_N", "content": ""}}
+  ],
+  "applied": ["R1"],
+  "unresolved": []
+}}
+"""
 
 
 def revised_body_errors(front_matter: str, body: str, lang: str) -> list[str]:
@@ -450,80 +541,157 @@ def revision_preservation_errors(original: str, revised: str, lang: str) -> list
     return errors
 
 
-def fallback_enriched_body(original: str, revised: str, lang: str) -> str:
-    """Preserve the published post when Gemini returns only a short patch."""
-    snippet = revised.strip()
-    if not snippet:
-        return original.strip()
-    heading = "추가 보강" if lang == "ko" else "Additional Review Notes"
-    if re.match(r"^##\s+", snippet):
-        addition = snippet
-    else:
-        addition = f"## {heading}\n\n{snippet}"
-    return f"{original.strip()}\n\n{addition.strip()}"
+def plan_criteria(plan: dict[str, Any], field_name: str, lang: str) -> list[str]:
+    values = []
+    for action in plan["actions"]:
+        if lang not in action["languages"]:
+            continue
+        lang_values = (action.get(field_name) or {}).get(lang) or []
+        values.extend(str(value).strip() for value in lang_values if str(value).strip())
+    return values
+
+
+def plan_applies_to(plan: dict[str, Any], lang: str) -> bool:
+    return any(lang in action["languages"] for action in plan["actions"])
+
+
+def apply_section_operations(
+    original: str,
+    payload: dict[str, Any],
+    plan: dict[str, Any],
+    lang: str,
+) -> str:
+    required = {
+        str(action["id"])
+        for action in plan["actions"]
+        if lang in action["languages"]
+    }
+    applied = {str(action_id) for action_id in payload.get("applied") or []}
+    unresolved = [str(action_id) for action_id in payload.get("unresolved") or []]
+    if unresolved:
+        raise ValueError(f"Unresolved {lang} revision actions: {unresolved}")
+    if applied != required:
+        raise ValueError(
+            f"Applied {lang} revision actions must be {sorted(required)}; received {sorted(applied)}"
+        )
+
+    operations = payload.get("operations")
+    if not isinstance(operations, list):
+        raise ValueError(f"{lang} revision response is missing operations")
+    sections = split_markdown_sections(original)
+    operation_actions = set()
+    touched = set()
+    for operation in operations:
+        if not isinstance(operation, dict):
+            raise ValueError(f"Invalid {lang} revision operation")
+        action_ids = operation.get("action_ids")
+        if action_ids is None:
+            action_ids = [operation.get("action_id")]
+        if not isinstance(action_ids, list) or not action_ids:
+            raise ValueError(f"Invalid {lang} revision action IDs")
+        action_ids = {str(action_id or "") for action_id in action_ids}
+        operation_name = str(operation.get("operation") or "")
+        target = str(operation.get("target") or "")
+        content = str(operation.get("content") or "").strip()
+        unknown_actions = action_ids - required
+        if unknown_actions:
+            raise ValueError(f"Unknown {lang} revision actions: {sorted(unknown_actions)}")
+        if operation_name not in {"replace", "delete", "insert_after"}:
+            raise ValueError(f"Unsupported {lang} revision operation: {operation_name}")
+        if (operation_name, target) in touched:
+            raise ValueError(f"Duplicate {lang} revision operation for {target}")
+        target_index = next(
+            (index for index, section in enumerate(sections) if section["id"] == target),
+            None,
+        )
+        if target_index is None:
+            raise ValueError(f"Unknown {lang} revision target: {target}")
+        if operation_name != "delete" and not content:
+            raise ValueError(f"{operation_name} requires content for {lang} target {target}")
+
+        if operation_name == "replace":
+            sections[target_index]["content"] = content
+        elif operation_name == "delete":
+            sections[target_index]["content"] = ""
+        else:
+            sections.insert(
+                target_index + 1,
+                {"id": f"inserted_{len(sections)}", "content": content},
+            )
+        touched.add((operation_name, target))
+        operation_actions.update(action_ids)
+
+    if operation_actions != required:
+        raise ValueError(
+            f"Operations for {lang} must cover {sorted(required)}; received {sorted(operation_actions)}"
+        )
+
+    revised = "\n\n".join(
+        section["content"].strip() for section in sections if section["content"].strip()
+    )
+    for value in plan_criteria(plan, "must_include", lang):
+        if value.casefold() not in revised.casefold():
+            raise ValueError(f"Revised {lang} body is missing required content: {value}")
+    for value in plan_criteria(plan, "must_exclude", lang):
+        if value.casefold() in revised.casefold():
+            raise ValueError(f"Revised {lang} body still contains forbidden content: {value}")
+    if revised.strip() == original.strip():
+        raise ValueError(f"Revision operations did not change the {lang} body")
+    return normalize_legacy_section_headings(revised)
+
+
+def request_language_revision(
+    lang: str,
+    model: GeminiModelAdapter,
+    tracker: UsageTracker,
+    body: str,
+    plan: dict[str, Any],
+    research_facts: str,
+    revised_english: str = "",
+) -> str:
+    raw = call_gemini(
+        model,
+        language_edit_prompt(lang, body, plan, research_facts, revised_english),
+        f"revision_{lang}",
+        tracker,
+        generation_config=REVISION_EDIT_CONFIG,
+    )
+    payload = parse_json_response(raw)
+    print(
+        f"[Revision:{lang}] Received {len(payload.get('operations') or [])} operations; "
+        f"applied={payload.get('applied') or []}; unresolved={payload.get('unresolved') or []}"
+    )
+    return apply_section_operations(body, payload, plan, lang)
 
 
 def request_revision(
-    review: ReviewRequest,
     model: GeminiModelAdapter,
     tracker: UsageTracker,
     bodies: dict[str, str],
     front_matters: dict[str, str],
+    plan: dict[str, Any],
     research_facts: str,
 ) -> dict[str, str]:
-    prompt = revision_prompt(review, bodies, research_facts)
-    last_revised: dict[str, str] = {}
-    last_errors: dict[str, list[str]] = {}
-
-    for attempt in range(1, MAX_REVISION_ATTEMPTS + 1):
-        raw = call_gemini(
-            model,
-            prompt,
-            "revision_bilingual" if attempt == 1 else "revision_bilingual_repair",
-            tracker,
-            generation_config=REVISION_CONFIG,
+    revised_english = bodies["en"]
+    if plan_applies_to(plan, "en"):
+        revised_english = request_language_revision(
+            "en", model, tracker, bodies["en"], plan, research_facts
         )
-        revised = {
-            lang: normalize_legacy_section_headings(body)
-            for lang, body in parse_revision_response(raw).items()
-        }
+        english_errors = revised_body_errors(front_matters["en"], revised_english, "en")
+        english_errors.extend(revision_preservation_errors(bodies["en"], revised_english, "en"))
+        if english_errors:
+            raise ContentValidationError("en", english_errors)
 
-        errors: dict[str, list[str]] = {}
-        for lang in ("ko", "en"):
-            body = revised.get(lang, "").strip()
-            if not body:
-                errors[lang] = [f"Revision response missing {lang} body"]
-                continue
-            body_errors = revised_body_errors(front_matters[lang], body, lang)
-            body_errors.extend(revision_preservation_errors(bodies[lang], body, lang))
-            if body_errors:
-                errors[lang] = body_errors
-
-        if not errors:
-            return revised
-
-        last_revised = revised
-        last_errors = errors
-        if attempt < MAX_REVISION_ATTEMPTS:
-            print(f"[Revision] Validation failed on attempt {attempt}; requesting full-body repair: {errors}")
-            prompt = revision_retry_prompt(review, bodies, research_facts, revised, errors)
-
-    recovered = {}
-    recovered_errors: dict[str, list[str]] = {}
-    for lang in ("ko", "en"):
-        body = fallback_enriched_body(bodies[lang], last_revised.get(lang, ""), lang)
-        errors = revised_body_errors(front_matters[lang], body, lang)
-        errors.extend(revision_preservation_errors(bodies[lang], body, lang))
-        if errors:
-            recovered_errors[lang] = errors
-        recovered[lang] = body
-
-    if not recovered_errors:
-        print("[Revision] Falling back to append-only enrichment after invalid model response")
-        return recovered
-
-    first_lang, first_errors = next(iter(recovered_errors.items()))
-    raise ContentValidationError(first_lang, first_errors)
+    revised_korean = bodies["ko"]
+    if plan_applies_to(plan, "ko"):
+        revised_korean = request_language_revision(
+            "ko", model, tracker, bodies["ko"], plan, research_facts, revised_english
+        )
+        korean_errors = revised_body_errors(front_matters["ko"], revised_korean, "ko")
+        korean_errors.extend(revision_preservation_errors(bodies["ko"], revised_korean, "ko"))
+        if korean_errors:
+            raise ContentValidationError("ko", korean_errors)
+    return {"en": revised_english, "ko": revised_korean}
 
 
 def apply_revision(review: ReviewRequest, model: GeminiModelAdapter, tracker: UsageTracker) -> list[str]:
@@ -541,13 +709,32 @@ def apply_revision(review: ReviewRequest, model: GeminiModelAdapter, tracker: Us
         front_matters[lang] = front_matter
         bodies[lang] = normalize_legacy_section_headings(body)
 
-    research_facts = collect_review_research(review, bodies, front_matters)
-    revised = request_revision(review, model, tracker, bodies, front_matters, research_facts)
+    plan = create_revision_plan(review, bodies, model, tracker)
+    search_queries = plan["search_queries_en"]
+    research_facts = (
+        collect_review_research(review, bodies, front_matters, search_queries)
+        if search_queries
+        else ""
+    )
+    revised = request_revision(model, tracker, bodies, front_matters, plan, research_facts)
+    references = extract_references(research_facts)
+    if references:
+        revised = {
+            lang: append_references(body, lang, references) if plan_applies_to(plan, lang) else body
+            for lang, body in revised.items()
+        }
 
-    updated_paths = []
+    validated_bodies: dict[str, str] = {}
     for lang, path in post_paths.items():
+        if not plan_applies_to(plan, lang):
+            continue
         body = revised.get(lang, "").strip()
         validate_revised_body(front_matters[lang], body, lang)
+        validated_bodies[lang] = body
+
+    updated_paths = []
+    for lang, body in validated_bodies.items():
+        path = post_paths[lang]
         path.write_text(f"{front_matters[lang]}{body}\n", encoding="utf-8")
         updated_paths.append(str(path))
 

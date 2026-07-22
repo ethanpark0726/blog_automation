@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-3.1%20Flash--Lite-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.20.8-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.21.0-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -173,6 +173,9 @@ After writing a ready review note in `_reviews/pending`, deploy the latest `clou
 - `/revise <...>` filters by `target_post_id`, short `post_id` suffix, or review filename fragment.
 - The GitHub Actions workflow sends a Telegram success/failure notification after completion.
 - Successfully processed review notes are deleted; failed notes stay in `_reviews/pending` for retry.
+- The revision engine first converts every numbered review instruction into a tracked action, then applies only validated section operations instead of regenerating the whole post.
+- English and Korean are revised and validated separately. A language with no applicable action is not rewritten.
+- Research references used for enrichment are appended deterministically, and incomplete action coverage leaves both posts unchanged.
 
 ---
 
@@ -265,7 +268,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.20.8** — Normalizes legacy H3-only posts before Obsidian revision validation.
+**v1.21.0** — Applies Obsidian reviews as tracked, language-specific section operations instead of regenerating whole posts.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -305,6 +308,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.20.6**: Crossref mock added to source coverage regression test
 - **`[x]` v1.20.7**: Obsidian revisions skip placeholder notes, seed research from the English title, and fall back to append-only enrichment when Gemini returns incomplete bodies
 - **`[x]` v1.20.8**: Legacy H3-only posts are normalized before revision so current heading validation can succeed
+- **`[x]` v1.21.0**: Revision Engine v2 with tracked review actions, section-level edits, language-specific validation, deterministic references, and atomic failure recovery
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 

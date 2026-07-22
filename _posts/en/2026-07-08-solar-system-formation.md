@@ -75,20 +75,3 @@ From a vast, unassuming cloud of gas and dust, to a fiery young sun, to a swirli
 
 Next time you look up, remember that every star you see could be the center of its own amazing story of creation, much like our own. We're all part of this grand, ongoing cosmic narrative. Keep looking up, keep wondering, and keep exploring! 🌟
 ---
-
-## Additional Review Notes
-
-The formation of the Solar System began approximately 4.6 billion years ago with the gravitational collapse of a small part of a giant molecular cloud. Most of the collapsing mass collected in the center, forming the Sun, while the remaining material flattened into a protoplanetary disk out of which the planets, moons, asteroids, and other small Solar System bodies formed. This model, known as the nebular hypothesis, explains the transition from a diffuse cloud to the structured system observed today. The process began when a giant molecular cloud, composed primarily of hydrogen and helium, experienced a gravitational instability, likely triggered by a nearby supernova shockwave. As the cloud collapsed, it began to rotate, and due to the conservation of angular momentum, it flattened into a disk. At the center of this disk, the density and temperature increased significantly, leading to the formation of a protosun. This protosun served as the gravitational anchor, accumulating the vast majority of the system's mass before eventually igniting through nuclear fusion. The protoplanetary disk surrounding the protosun provided the raw materials for the subsequent formation of planets through the process of accretion.
-
-```mermaid
-graph TD
-    A[Giant Molecular Cloud] --> B{Gravitational Collapse};
-    B --> C[Rapid Rotation & Flattening];
-    C --> D[Protoplanetary Disk Forms];
-    D --> E[Protosun Ignites at Center];
-    E --> F[Planetesimals Form in Disk];
-    F --> G[Planets Accrete & Grow];
-    G --> H[Our Solar System!];
-```
-
-Within the protoplanetary disk, dust and gas particles collided and stuck together through accretion. These tiny clumps grew into pebbles, then boulders, and eventually planetesimals, which served as the building blocks for the planets. The composition of these planets was dictated by the temperature gradient within the disk. In the inner region, often called the 'oven,' temperatures were too high for volatile compounds to condense. Only metals and silicates could solidify, leading to the formation of small, rocky terrestrial planets like Earth and Mars. In the outer region, beyond the 'frost line,' it was cold enough for water, methane, and ammonia to freeze. This abundance of solid material allowed icy cores to grow rapidly, eventually capturing vast amounts of hydrogen and helium to become gas giants like Jupiter and Saturn. Our understanding of this process is continuously refined by observing exoplanetary systems. By studying these distant worlds, scientists confirm that the principles of nebular collapse, accretion, and temperature-dependent composition are fundamental to planetary formation across the galaxy. The Solar System is not an isolated anomaly but a product of universal physical laws that govern the evolution of stars and their orbiting companions. This ongoing research allows for a deeper understanding of our own home in the broader context of the cosmos, revealing that the story of our origin is a single chapter in a much larger, universal narrative of stellar and planetary evolution.

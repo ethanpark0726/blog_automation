@@ -1,3 +1,5 @@
+import contextlib
+import io
 import sys
 import tempfile
 import unittest
@@ -32,6 +34,7 @@ class FakeResponse:
             candidates_token_count=30,
             total_token_count=150,
         )
+        self.candidates = [SimpleNamespace(finish_reason="STOP")]
 
 
 class SequenceModel:
@@ -140,6 +143,24 @@ class GeminiRuntimeTests(unittest.TestCase):
         )
 
         self.assertEqual(model.generation_configs, [config])
+
+    def test_success_log_includes_output_tokens_and_finish_reason(self):
+        model = SequenceModel([FakeResponse()])
+        tracker = UsageTracker()
+        output = io.StringIO()
+
+        with contextlib.redirect_stdout(output):
+            call_gemini(
+                model,
+                "prompt",
+                "revision_en",
+                tracker,
+                initial_delay_seconds=0,
+                sleep_fn=lambda _seconds: None,
+            )
+
+        self.assertIn("output_tokens=30", output.getvalue())
+        self.assertIn("finish_reason=STOP", output.getvalue())
 
     def test_writes_structured_failure_result(self):
         tracker = UsageTracker()

@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.21.0] — 2026-07-21
+
+### Added
+- **Tracked Revision Plan**: Every numbered review instruction is converted into a validated action with language scope, acceptance criteria, and optional English research queries.
+- **Section Operation Engine**: Gemini returns targeted delete, replace, and insert operations against stable Markdown section IDs instead of returning replacement KO/EN articles.
+- **Revision Diagnostics**: Successful Gemini calls now log output-token counts and finish reasons, while revision stages log planned actions and applied or unresolved action IDs.
+
+### Changed
+- **Language-Specific Revision**: English and Korean are revised and validated independently, and a language with no applicable review action is left byte-for-byte unchanged.
+- **Reference Handling**: Research references are extracted and appended deterministically only to languages changed by factual enrichment.
+
+### Fixed
+- **Atomic Revision Failure**: Missing, unresolved, invalid, or no-op section operations now abort before either post is written, preserving the ready review note for retry.
+- **Solar Revision Recovery**: Removed the incomplete append-only fallback output from the Solar System post pair and restored its ready review note for Revision Engine v2 testing.
+
+---
+
 ## [1.20.8] — 2026-07-21
 
 ### Fixed
