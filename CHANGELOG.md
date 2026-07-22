@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.21.2] — 2026-07-21
+
+### Fixed
+- **Markdown Text Matching**: Targeted revision edits now tolerate equivalent spaces and line breaks while still rejecting different text.
+
+### Changed
+- **Revision Token Usage**: Korean revision calls no longer receive the full revised English article because the shared plan and research context already provide the required alignment.
+
+---
+
 ## [1.21.1] — 2026-07-21
 
 ### Fixed

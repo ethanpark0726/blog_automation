@@ -447,14 +447,8 @@ def language_edit_prompt(
     body: str,
     plan: dict[str, Any],
     research_facts: str,
-    revised_english: str = "",
 ) -> str:
     language = "Korean" if lang == "ko" else "English"
-    canonical = (
-        f"\nValidated revised English article for semantic alignment:\n---\n{revised_english}\n---\n"
-        if lang == "ko"
-        else ""
-    )
     language_plan = {
         **plan,
         "actions": [action for action in plan["actions"] if lang in action["languages"]],
@@ -472,7 +466,6 @@ Rules:
 6. Preserve facts, tables, Mermaid diagrams, code blocks, headings, and references unless an action changes them.
 7. Every action ID must appear in applied or unresolved. Do not claim applied unless its operation is present.
 8. Use declarative Korean endings such as ~이다/~했다 when the plan requests a neutral style.
-{canonical}
 Plan:
 {json.dumps(language_plan, ensure_ascii=False)}
 
@@ -628,17 +621,18 @@ def apply_section_operations(
             raise ValueError(f"Unknown {lang} revision target: {target}")
         if operation_name not in {"delete", "replace_text"} and not content:
             raise ValueError(f"{operation_name} requires content for {lang} target {target}")
-        if operation_name == "replace_text" and not old_text:
+        if operation_name == "replace_text" and not old_text.strip():
             raise ValueError(f"replace_text requires old_text for {lang} target {target}")
-        if operation_name == "replace_text" and old_text not in sections[target_index]["content"]:
-            raise ValueError(f"replace_text old_text was not found in {lang} target {target}")
 
         if operation_name == "replace":
             sections[target_index]["content"] = content
         elif operation_name == "replace_text":
-            sections[target_index]["content"] = sections[target_index]["content"].replace(
-                old_text, content
+            pattern = re.compile(r"\s+".join(re.escape(part) for part in old_text.split()))
+            sections[target_index]["content"], replacements = pattern.subn(
+                lambda _match: content, sections[target_index]["content"]
             )
+            if not replacements:
+                raise ValueError(f"replace_text old_text was not found in {lang} target {target}")
         elif operation_name == "delete":
             sections[target_index]["content"] = ""
         else:
@@ -675,11 +669,10 @@ def request_language_revision(
     body: str,
     plan: dict[str, Any],
     research_facts: str,
-    revised_english: str = "",
 ) -> str:
     raw = call_gemini(
         model,
-        language_edit_prompt(lang, body, plan, research_facts, revised_english),
+        language_edit_prompt(lang, body, plan, research_facts),
         f"revision_{lang}",
         tracker,
         generation_config=REVISION_EDIT_CONFIG,
@@ -713,7 +706,7 @@ def request_revision(
     revised_korean = bodies["ko"]
     if plan_applies_to(plan, "ko"):
         revised_korean = request_language_revision(
-            "ko", model, tracker, bodies["ko"], plan, research_facts, revised_english
+            "ko", model, tracker, bodies["ko"], plan, research_facts
         )
         korean_errors = revised_body_errors(front_matters["ko"], revised_korean, "ko")
         korean_errors.extend(revision_preservation_errors(bodies["ko"], revised_korean, "ko"))

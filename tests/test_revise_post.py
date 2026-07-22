@@ -323,6 +323,38 @@ class RevisePostTests(unittest.TestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
+    def test_replace_text_accepts_markdown_whitespace_differences(self):
+        plan = {
+            "actions": [
+                {
+                    "id": "R1",
+                    "kind": "style",
+                    "languages": ["en"],
+                    "must_include": {"en": ["Neutral sentence."]},
+                    "must_exclude": {"en": [], "ko": []},
+                }
+            ]
+        }
+        payload = {
+            "operations": [
+                {
+                    "action_ids": ["R1"],
+                    "operation": "replace_text",
+                    "target": "section_1",
+                    "old_text": "First sentence. Second sentence.",
+                    "content": "Neutral sentence.",
+                }
+            ],
+            "applied": ["R1"],
+            "unresolved": [],
+        }
+
+        revised = revise_post.apply_section_operations(
+            "## Section\n\nFirst sentence.\nSecond sentence.", payload, plan, "en"
+        )
+
+        self.assertIn("Neutral sentence.", revised)
+
     def test_apply_revision_applies_review_as_section_operations(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

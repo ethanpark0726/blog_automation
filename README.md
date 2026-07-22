@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-3.1%20Flash--Lite-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.21.1-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.21.2-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -268,7 +268,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.21.1** — Preserves existing article text by restricting style and enrichment revisions to targeted text edits or insertions.
+**v1.21.2** — Tolerates Markdown whitespace in targeted edits and removes duplicated English context from Korean revision calls.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -310,6 +310,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.20.8**: Legacy H3-only posts are normalized before revision so current heading validation can succeed
 - **`[x]` v1.21.0**: Revision Engine v2 with tracked review actions, section-level edits, language-specific validation, deterministic references, and atomic failure recovery
 - **`[x]` v1.21.1**: Safe partial-text operations prevent style and enrichment reviews from shortening whole sections
+- **`[x]` v1.21.2**: Whitespace-tolerant targeted edits and lower-token Korean revision prompts
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 
