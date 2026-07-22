@@ -303,6 +303,43 @@ status: ready
             finally:
                 os.chdir(original_cwd)
 
+    def test_apply_revision_normalizes_legacy_h3_sections(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            post_id = "legacy-123"
+            (root / "_posts" / "ko").mkdir(parents=True)
+            (root / "_posts" / "en").mkdir(parents=True)
+            ko_path = root / "_posts" / "ko" / "post.md"
+            en_path = root / "_posts" / "en" / "post.md"
+            ko_path.write_text(post("ko", post_id).replace("## ", "### "), encoding="utf-8")
+            en_path.write_text(post("en", post_id).replace("## ", "### "), encoding="utf-8")
+            review = ReviewRequest(
+                path=root / "_reviews" / "pending" / "request.md",
+                target_post_id=post_id,
+                instructions=["Enrich the existing article."],
+            )
+            model = AlwaysShortModel()
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                with patch.object(revise_post, "collect_review_research", return_value=""):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        apply_revision(
+                            review,
+                            model,
+                            SimpleNamespace(
+                                record_attempt=lambda _stage: None,
+                                record_success=lambda _stage, _response: None,
+                            ),
+                        )
+                en_text = en_path.read_text(encoding="utf-8")
+                ko_text = ko_path.read_text(encoding="utf-8")
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertGreaterEqual(en_text.count("\n## "), 2)
+        self.assertGreaterEqual(ko_text.count("\n## "), 2)
+
     def test_find_posts_accepts_unique_post_id_suffix(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

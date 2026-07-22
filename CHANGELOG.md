@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.8] — 2026-07-21
+
+### Fixed
+- **Legacy Revision Headings**: Obsidian revision now promotes H3 sections when an older post has no H2 sections, preventing repeated `post requires at least two level-2 headings` failures.
+
+---
+
 ## [1.20.7] — 2026-07-20
 
 ### Fixed
