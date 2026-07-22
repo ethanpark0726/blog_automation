@@ -355,6 +355,39 @@ class RevisePostTests(unittest.TestCase):
 
         self.assertIn("Neutral sentence.", revised)
 
+    def test_revision_accepts_valid_article_after_requested_style_reduction(self):
+        en_front_matter, original_en = revise_post.split_front_matter(post("en", "style-123"))
+        ko_front_matter, original_ko = revise_post.split_front_matter(post("ko", "style-123"))
+        revised_en = (
+            "## Introduction\n\n"
+            + ("Neutral technical explanation. " * 170)
+            + "\n\n## Details\n\n"
+            + ("Additional explanation. " * 80)
+        )
+        plan = {
+            "actions": [
+                {
+                    "id": "R1",
+                    "kind": "style",
+                    "languages": ["en"],
+                    "must_include": {"en": [], "ko": []},
+                    "must_exclude": {"en": [], "ko": []},
+                }
+            ]
+        }
+
+        with patch.object(revise_post, "request_language_revision", return_value=revised_en):
+            revised = revise_post.request_revision(
+                object(),
+                SimpleNamespace(),
+                {"en": original_en, "ko": original_ko},
+                {"en": en_front_matter, "ko": ko_front_matter},
+                plan,
+                "",
+            )
+
+        self.assertEqual(revised_en, revised["en"])
+
     def test_apply_revision_applies_review_as_section_operations(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

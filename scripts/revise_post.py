@@ -31,8 +31,6 @@ REVISION_EDIT_CONFIG = {
     "max_output_tokens": 16384,
     "response_mime_type": "application/json",
 }
-MIN_REVISION_WORD_RETENTION = 0.70
-MIN_REVISION_CHAR_RETENTION = 0.70
 PLACEHOLDER_POST_IDS = {"", "replace-with-real-post-id"}
 
 
@@ -507,26 +505,9 @@ def validate_revised_body(front_matter: str, body: str, lang: str) -> None:
         raise ContentValidationError(lang, errors)
 
 
-def revision_preservation_errors(original: str, revised: str, lang: str) -> list[str]:
-    """Guard against model responses that rewrite or truncate too aggressively."""
+def heading_preservation_errors(original: str, revised: str) -> list[str]:
+    """Guard against removing most existing sections."""
     errors = []
-    if lang == "en":
-        original_size = len(re.findall(r"\b[\w'-]+\b", original))
-        revised_size = len(re.findall(r"\b[\w'-]+\b", revised))
-        if original_size >= 450 and revised_size < original_size * MIN_REVISION_WORD_RETENTION:
-            errors.append(
-                "revised English body is too short relative to the original; "
-                "Phase 4.1 requires enrichment, not replacement"
-            )
-    else:
-        original_size = len(original.strip())
-        revised_size = len(revised.strip())
-        if original_size >= 1200 and revised_size < original_size * MIN_REVISION_CHAR_RETENTION:
-            errors.append(
-                "revised Korean body is too short relative to the original; "
-                "Phase 4.1 requires enrichment, not replacement"
-            )
-
     original_headings = set(re.findall(r"^##\s+(.+)$", original, re.MULTILINE))
     revised_headings = set(re.findall(r"^##\s+(.+)$", revised, re.MULTILINE))
     if len(original_headings) >= 2:
@@ -699,7 +680,7 @@ def request_revision(
             "en", model, tracker, bodies["en"], plan, research_facts
         )
         english_errors = revised_body_errors(front_matters["en"], revised_english, "en")
-        english_errors.extend(revision_preservation_errors(bodies["en"], revised_english, "en"))
+        english_errors.extend(heading_preservation_errors(bodies["en"], revised_english))
         if english_errors:
             raise ContentValidationError("en", english_errors)
 
@@ -709,7 +690,7 @@ def request_revision(
             "ko", model, tracker, bodies["ko"], plan, research_facts
         )
         korean_errors = revised_body_errors(front_matters["ko"], revised_korean, "ko")
-        korean_errors.extend(revision_preservation_errors(bodies["ko"], revised_korean, "ko"))
+        korean_errors.extend(heading_preservation_errors(bodies["ko"], revised_korean))
         if korean_errors:
             raise ContentValidationError("ko", korean_errors)
     return {"en": revised_english, "ko": revised_korean}

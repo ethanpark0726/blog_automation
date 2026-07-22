@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.21.3] — 2026-07-21
+
+### Fixed
+- **Valid Style Reduction**: Removed the legacy 70% original-length comparison that rejected valid articles after requested tone cleanup. Absolute content, heading, action-coverage, and section-operation safety checks remain enforced.
+- **Revision Regression Coverage**: Added the previously missing case where a revised English article remains above the 450-word floor but is intentionally shorter after style cleanup.
+
+---
+
 ## [1.21.2] — 2026-07-21
 
 ### Fixed
