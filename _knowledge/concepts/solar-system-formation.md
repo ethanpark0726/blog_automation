@@ -16,7 +16,7 @@ Solar System Formation에 대한 블로그 포스트
 
 ## Related Posts
 - EN: [[2026-07-08-solar-system-formation|Solar System Formation]] (`_posts/en/2026-07-08-solar-system-formation.md`)
-- KO: [[2026-07-08-아빠가-들려주는-태양계-탄생-이야기-우리-집은-어떻게-만들어졌을까|아빠가 들려주는 태양계 탄생 이야기: 우리 집은 어떻게 만들어졌을까?]] (`_posts/ko/2026-07-08-아빠가-들려주는-태양계-탄생-이야기-우리-집은-어떻게-만들어졌을까.md`)
+- KO: [[2026-07-08-태양계-탄생-이야기|아빠가 들려주는 태양계 탄생 이야기: 우리 집은 어떻게 만들어졌을까?]] (`_posts/ko/2026-07-08-아빠가-들려주는-태양계-탄생-이야기-우리-집은-어떻게-만들어졌을까.md`)
 
 ## Related Concepts
 - [[solar-system|solar system]]
