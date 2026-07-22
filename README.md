@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-3.1%20Flash--Lite-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.20.7-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.20.8-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -265,7 +265,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.20.7** — Keeps Obsidian revisions append-safe when Gemini returns incomplete bodies.
+**v1.20.8** — Normalizes legacy H3-only posts before Obsidian revision validation.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -304,6 +304,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.20.5**: Delete processed Obsidian review notes instead of archiving completed logs
 - **`[x]` v1.20.6**: Crossref mock added to source coverage regression test
 - **`[x]` v1.20.7**: Obsidian revisions skip placeholder notes, seed research from the English title, and fall back to append-only enrichment when Gemini returns incomplete bodies
+- **`[x]` v1.20.8**: Legacy H3-only posts are normalized before revision so current heading validation can succeed
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 

@@ -85,6 +85,13 @@ def split_front_matter(text: str) -> tuple[str, str]:
     return text[: end + 5], text[end + 5 :].lstrip()
 
 
+def normalize_legacy_section_headings(body: str) -> str:
+    """Promote H3 sections when a legacy post has no H2 sections."""
+    if re.search(r"^##\s+", body, re.MULTILINE):
+        return body
+    return re.sub(r"^###(?=\s+)", "##", body, flags=re.MULTILINE)
+
+
 def parse_review_note(path: Path) -> ReviewRequest:
     text = path.read_text(encoding="utf-8")
     metadata, body = parse_front_matter(text)
@@ -449,7 +456,7 @@ def fallback_enriched_body(original: str, revised: str, lang: str) -> str:
     if not snippet:
         return original.strip()
     heading = "추가 보강" if lang == "ko" else "Additional Review Notes"
-    if snippet.startswith("##"):
+    if re.match(r"^##\s+", snippet):
         addition = snippet
     else:
         addition = f"## {heading}\n\n{snippet}"
@@ -476,7 +483,10 @@ def request_revision(
             tracker,
             generation_config=REVISION_CONFIG,
         )
-        revised = parse_revision_response(raw)
+        revised = {
+            lang: normalize_legacy_section_headings(body)
+            for lang, body in parse_revision_response(raw).items()
+        }
 
         errors: dict[str, list[str]] = {}
         for lang in ("ko", "en"):
@@ -529,7 +539,7 @@ def apply_revision(review: ReviewRequest, model: GeminiModelAdapter, tracker: Us
     for lang, path in post_paths.items():
         front_matter, body = split_front_matter(path.read_text(encoding="utf-8"))
         front_matters[lang] = front_matter
-        bodies[lang] = body
+        bodies[lang] = normalize_legacy_section_headings(body)
 
     research_facts = collect_review_research(review, bodies, front_matters)
     revised = request_revision(review, model, tracker, bodies, front_matters, research_facts)
