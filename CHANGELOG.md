@@ -5,6 +5,7 @@
 ### Fixed
 - **Review Note Placeholder Safety**: Ready Obsidian review notes with a missing or template `target_post_id` are skipped before post lookup so `/revise` does not fail on copied templates.
 - **Revision Research Fallback**: Korean-only review notes now seed research from the English post title so enrichment does not start with zero queries.
+- **Append-Safe Revision Recovery**: If Gemini returns incomplete revised bodies twice, the revision workflow now preserves the original post and appends the generated note as a new section instead of failing validation.
 
 All notable changes to this project are documented here.  
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).  

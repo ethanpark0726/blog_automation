@@ -443,6 +443,19 @@ def revision_preservation_errors(original: str, revised: str, lang: str) -> list
     return errors
 
 
+def fallback_enriched_body(original: str, revised: str, lang: str) -> str:
+    """Preserve the published post when Gemini returns only a short patch."""
+    snippet = revised.strip()
+    if not snippet:
+        return original.strip()
+    heading = "추가 보강" if lang == "ko" else "Additional Review Notes"
+    if snippet.startswith("##"):
+        addition = snippet
+    else:
+        addition = f"## {heading}\n\n{snippet}"
+    return f"{original.strip()}\n\n{addition.strip()}"
+
+
 def request_revision(
     review: ReviewRequest,
     model: GeminiModelAdapter,
@@ -485,7 +498,21 @@ def request_revision(
             print(f"[Revision] Validation failed on attempt {attempt}; requesting full-body repair: {errors}")
             prompt = revision_retry_prompt(review, bodies, research_facts, revised, errors)
 
-    first_lang, first_errors = next(iter(last_errors.items()))
+    recovered = {}
+    recovered_errors: dict[str, list[str]] = {}
+    for lang in ("ko", "en"):
+        body = fallback_enriched_body(bodies[lang], last_revised.get(lang, ""), lang)
+        errors = revised_body_errors(front_matters[lang], body, lang)
+        errors.extend(revision_preservation_errors(bodies[lang], body, lang))
+        if errors:
+            recovered_errors[lang] = errors
+        recovered[lang] = body
+
+    if not recovered_errors:
+        print("[Revision] Falling back to append-only enrichment after invalid model response")
+        return recovered
+
+    first_lang, first_errors = next(iter(recovered_errors.items()))
     raise ContentValidationError(first_lang, first_errors)
 
 
