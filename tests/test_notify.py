@@ -62,6 +62,43 @@ class NotifyTests(unittest.TestCase):
         self.assertIn("450-word safety floor", message)
         self.assertIn("상세 사유", message)
 
+    def test_success_message_distinguishes_warning_publication(self):
+        message = notify.build_success_message(
+            {
+                "metrics": {
+                    "content_release": {
+                        "state": "published_with_warnings",
+                        "warnings": ["en: English body is below the 1200-word target"],
+                    }
+                }
+            },
+            {"status": "success"},
+            "https://example.test/blog",
+            "https://example.test/actions",
+        )
+
+        self.assertIn("경고와 함께 발행", message)
+        self.assertIn("1200-word target", message)
+
+    def test_success_message_reports_preserved_draft_without_pages_claim(self):
+        message = notify.build_success_message(
+            {
+                "metrics": {
+                    "content_release": {
+                        "state": "draft",
+                        "warnings": ["en: English body is below the 450-word safety floor"],
+                    }
+                }
+            },
+            {"status": "skipped"},
+            "https://example.test/blog",
+            "https://example.test/actions",
+        )
+
+        self.assertIn("초안으로 보존", message)
+        self.assertIn("450-word safety floor", message)
+        self.assertNotIn("GitHub Pages 배포 완료", message)
+
     def test_duplicate_request_message_is_explicit(self):
         message = notify.api_failure_message(
             {

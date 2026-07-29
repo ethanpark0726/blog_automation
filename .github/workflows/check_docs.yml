@@ -5,6 +5,7 @@ name: 📋 Docs Update Enforcer
 #
 # Operational content is exempt:
 # - _posts/: generated blog posts
+# - _drafts/: generated posts held below the publication safety floor
 # - _knowledge/: generated Obsidian notes
 # - _reviews/: review-note inputs
 
@@ -36,6 +37,7 @@ jobs:
 
           DOC_REQUIRED_CHANGES=$(echo "$CHANGED" \
             | grep -v '^_posts/' \
+            | grep -v '^_drafts/' \
             | grep -v '^_knowledge/' \
             | grep -v '^_reviews/' \
             | grep -v '^\.git' || true)
