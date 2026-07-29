@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-3.1%20Flash--Lite-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.21.6-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.22.0-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -24,6 +24,7 @@
 | 🚀 **Auto Deploy** | Git Push → GitHub Pages auto-build |
 | 📩 **Quota-Aware Notify** | Telegram reports generation status, Gemini usage, and actionable quota errors |
 | 📡 **Operations Telemetry** | Actions summary and Telegram report per-stage tokens, source quality, and the actual Pages result |
+| 🛟 **Graceful Content Release** | Publishes target-length warnings, but preserves content below the safety floor as a bilingual draft |
 
 ---
 
@@ -40,9 +41,11 @@
 🌐 SearchAgent      →  English source collection + coverage gate
 📝 EditorAgent      →  English fact-check + validation
 🇰🇷 KO Localizer     →  Validated English → natural Korean
-💾 FileWriterAgent  →  Jekyll Markdown file creation
+💾 FileWriterAgent  →  Release decision + Markdown file creation
         ↓
-🇰🇷 _posts/ko/   +   🇺🇸 _posts/en/
+Safety floor met                   Safety floor missed
+🇰🇷 _posts/ko/ + 🇺🇸 _posts/en/    📝 _drafts/ko/ + _drafts/en/
+                                   + _reviews/pending/
         ↓
 🚀 Git Push → 🌐 Wait for GitHub Pages completion → 📩 Verified notification
 ```
@@ -93,6 +96,9 @@ blog_automation/
 ├── 📁 _posts/
 │   ├── ko/                    # Korean posts (auto-generated)
 │   └── en/                    # English posts (auto-generated)
+├── 📁 _drafts/
+│   ├── ko/                    # Korean drafts below the publication safety floor
+│   └── en/                    # English drafts below the publication safety floor
 │
 ├── _config.yml                # Jekyll configuration
 ├── Gemfile                    # Ruby dependencies
@@ -154,7 +160,7 @@ Send a message to your bot:
 What is Kubernetes?
 ```
 
-In ~2–4 minutes, KO + EN posts will appear on your GitHub Pages blog! 🎉
+In ~2–4 minutes, content that meets the safety floor appears on GitHub Pages. Target-length misses are published with a Telegram warning; content below the safety floor is committed under `_drafts` with a draft review note instead of being published.
 
 ### Telegram Obsidian Revision Commands
 
@@ -268,7 +274,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.21.6** — Removes AI-generated literal criteria that rejected semantically valid revisions.
+**v1.22.0** — Publishes usable short content with warnings and preserves content below the safety floor as drafts.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -315,6 +321,8 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.21.4**: Stable block-ID revision operations eliminate source-text matching failures and duplicate output tokens
 - **`[x]` v1.21.5**: Semantic style validation prevents example wording from causing false revision failures
 - **`[x]` v1.21.6**: Remove brittle AI-generated include/exclude strings from revision validation
+- **`[x]` v1.22.0**: Editor metadata recovery and graceful publish-or-preserve content policy
+- **`[ ]` v1.22.1**: Evaluate Gemini structured output after the graceful release policy is proven in production
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 

@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.22.0] — 2026-07-29
+
+### Added
+- **Graceful Content Release**: Articles above the language safety floors are published even when they miss the preferred target length, with exact validation warnings included in Telegram.
+- **Draft Preservation**: Bilingual content below either safety floor is committed under `_drafts/` instead of failing or being publicly deployed.
+- **Draft Enrichment Note**: Every preserved draft pair receives a matching draft review note under `_reviews/pending/`.
+
+### Fixed
+- **Editor Metadata Recovery**: The English Editor now restores a missing `json_meta` block locally, matching the existing Research Writer and Korean Localizer behavior without another Gemini call.
+- **Draft Deployment Wait**: Telegram workflows skip the GitHub Pages wait for preserved drafts, avoiding false deployment timeouts.
+- **Draft Duplicate Guard**: Repeated Telegram requests are rejected when an equivalent post already exists in either `_posts/` or `_drafts/`.
+
+### Changed
+- **Operational Content Rule**: Generated `_drafts/` changes are exempt from the README/CHANGELOG enforcement rule, like `_posts/`, `_knowledge/`, and `_reviews/`.
+
+---
+
 ## [1.21.6] — 2026-07-21
 
 ### Fixed

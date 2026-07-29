@@ -70,13 +70,20 @@ jobs:
           git config --global user.name "Blog Automation Bot 🤖"
 
       # ── 6. Check Changes and Commit ───────────────────────────
-      - name: 📝 Commit New Posts
+      - name: 📝 Commit Generated Content
         run: |
-          git add _posts/ _knowledge/
+          git add _posts/ _knowledge/ _reviews/
+          if [ -d "_drafts" ]; then
+            git add _drafts/
+          fi
           if git diff --staged --quiet; then
             echo "No new files to commit."
           else
-            COMMIT_MSG="feat: add post from Telegram (ko/en) - $(date +'%Y-%m-%d %H:%M:%S')"
+            if [ "${PUBLICATION_STATE}" = "draft" ]; then
+              COMMIT_MSG="draft: preserve Telegram post for enrichment - $(date +'%Y-%m-%d %H:%M:%S')"
+            else
+              COMMIT_MSG="feat: add post from Telegram (ko/en) - $(date +'%Y-%m-%d %H:%M:%S')"
+            fi
             git commit -m "$COMMIT_MSG"
           fi
           echo "PAGES_COMMIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
@@ -87,7 +94,7 @@ jobs:
           git push origin HEAD
 
       - name: Wait for GitHub Pages Deployment
-        if: success() && github.ref_name == 'main'
+        if: success() && github.ref_name == 'main' && env.PUBLICATION_STATE != 'draft'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PAGES_COMMIT_SHA: ${{ env.PAGES_COMMIT_SHA }}
@@ -95,12 +102,19 @@ jobs:
           python scripts/pages_status.py
 
       - name: Skip GitHub Pages Wait on Feature Branches
-        if: success() && github.ref_name != 'main'
+        if: success() && github.ref_name != 'main' && env.PUBLICATION_STATE != 'draft'
         env:
           PAGES_COMMIT_SHA: ${{ env.PAGES_COMMIT_SHA }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
         run: |
           python -c "import json, os; open('.pages_result.json', 'w', encoding='utf-8').write(json.dumps({'status': 'skipped', 'conclusion': 'feature_branch', 'run_url': '', 'commit_sha': os.environ.get('PAGES_COMMIT_SHA', ''), 'branch': os.environ.get('GITHUB_REF_NAME', ''), 'message': 'GitHub Pages deploy waits are skipped outside main because deploy.yml only auto-runs on main.'}, indent=2))"
+
+      - name: Skip GitHub Pages Wait for Preserved Drafts
+        if: success() && env.PUBLICATION_STATE == 'draft'
+        env:
+          PAGES_COMMIT_SHA: ${{ env.PAGES_COMMIT_SHA }}
+        run: |
+          python -c "import json, os; open('.pages_result.json', 'w', encoding='utf-8').write(json.dumps({'status': 'skipped', 'conclusion': 'draft', 'run_url': '', 'commit_sha': os.environ.get('PAGES_COMMIT_SHA', ''), 'message': 'Content below the safety floor was preserved under _drafts and was not published.'}, indent=2))"
 
       - name: 🧹 Clear Successful Checkpoint
         if: success()

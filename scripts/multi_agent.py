@@ -50,6 +50,10 @@ QUERY_INPUT = os.environ.get("QUERY_INPUT", "")
 CHAT_ID = os.environ.get("CHAT_ID", "")
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "").strip() or "gemini-3.1-flash-lite"
+SAFETY_FLOOR_ERRORS = {
+    "en": "English body is below the 450-word safety floor",
+    "ko": "Korean body is below the 1200-character safety floor",
+}
 
 if not GEMINI_API_KEY:
     print("❌ ERROR: GEMINI_API_KEY environment variable is not set.")
@@ -78,6 +82,38 @@ class GeminiModelAdapter:
 
 
 client = genai.Client(api_key=GEMINI_API_KEY)
+
+
+def validate_for_release(
+    content: str,
+    lang: str,
+    source_urls: list[str],
+) -> tuple[list[str], bool]:
+    validation = validate_post(content, lang, source_urls=source_urls)
+    safety_error = SAFETY_FLOOR_ERRORS[lang]
+    blocking_errors = [error for error in validation.errors if error != safety_error]
+    if blocking_errors:
+        raise ContentValidationError(lang, blocking_errors)
+    warnings = [*validation.warnings]
+    below_safety_floor = safety_error in validation.errors
+    if below_safety_floor:
+        warnings.append(safety_error)
+    return warnings, below_safety_floor
+
+
+def assess_content_release(posts: dict[str, str], facts: str) -> tuple[str, list[str]]:
+    source_urls = [reference["url"] for reference in extract_references(facts)]
+    warnings = []
+    below_safety_floor = False
+    for lang, content in posts.items():
+        lang_warnings, lang_below_floor = validate_for_release(content, lang, source_urls)
+        warnings.extend(f"{lang}: {warning}" for warning in lang_warnings)
+        below_safety_floor = below_safety_floor or lang_below_floor
+    if below_safety_floor:
+        return "draft", warnings
+    return ("published_with_warnings" if warnings else "published"), warnings
+
+
 model = GeminiModelAdapter(client, GEMINI_MODEL)
 usage_tracker = UsageTracker()
 
@@ -327,15 +363,16 @@ def request_fingerprint(query: str) -> str:
 
 def ensure_request_is_new(fingerprint: str) -> None:
     marker = f'request_fingerprint: "{fingerprint}"'
-    for post_path in Path("_posts").glob("*/*.md"):
-        try:
-            header = post_path.read_text(encoding="utf-8")[:2000]
-        except OSError:
-            continue
-        if marker in header:
-            raise DuplicateRequestError(
-                f"This Telegram request was already published in {post_path.as_posix()}"
-            )
+    for root in ("_posts", "_drafts"):
+        for post_path in Path(root).glob("*/*.md"):
+            try:
+                header = post_path.read_text(encoding="utf-8")[:2000]
+            except OSError:
+                continue
+            if marker in header:
+                raise DuplicateRequestError(
+                    f"This Telegram request was already generated in {post_path.as_posix()}"
+                )
 
 
 class ResearchWriterAgent:
@@ -521,16 +558,20 @@ class EditorAgent:
         print("\n[EditorAgent] Fact-checking the canonical English draft...")
         references = extract_references(facts)
         reviewed = self._review_and_fix(draft, classification, facts)
+        reviewed = append_missing_metadata_block(
+            reviewed,
+            title=classification.get("topic_en", "Untitled"),
+            description=f"A source-grounded article about {classification.get('topic_en', 'this topic')}.",
+            tags=classification.get("keywords", []),
+        )
         final = append_references(reviewed, "en", references)
-        validation = validate_post(
+        warnings, _ = validate_for_release(
             final,
             "en",
-            source_urls=[reference["url"] for reference in references],
+            [reference["url"] for reference in references],
         )
-        for warning in validation.warnings:
+        for warning in warnings:
             print(f"[ContentValidator:en] Warning: {warning}")
-        if not validation.valid:
-            raise ContentValidationError("en", validation.errors)
 
         print("[EditorAgent] Canonical English review and validation complete")
         return reviewed, final
@@ -619,15 +660,13 @@ Output only the complete Korean article and its final `json_meta` block.
         )
         references = extract_references(facts)
         final = append_references(localized, "ko", references)
-        validation = validate_post(
+        warnings, _ = validate_for_release(
             final,
             "ko",
-            source_urls=[reference["url"] for reference in references],
+            [reference["url"] for reference in references],
         )
-        for warning in validation.warnings:
+        for warning in warnings:
             print(f"[ContentValidator:ko] Warning: {warning}")
-        if not validation.valid:
-            raise ContentValidationError("ko", validation.errors)
 
         print("[KoreanLocalizerAgent] Korean localization and validation complete")
         return final
@@ -637,7 +676,13 @@ Output only the complete Korean article and its final `json_meta` block.
 # Agent 5: FileWriterAgent
 # ═══════════════════════════════════════════════════════════════════════════
 class FileWriterAgent:
-    def run(self, posts: dict, classification: dict, fingerprint: str) -> list:
+    def run(
+        self,
+        posts: dict,
+        classification: dict,
+        fingerprint: str,
+        output_root: str = "_posts",
+    ) -> list:
         now_kst = datetime.now(KST)
         date_str = now_kst.strftime("%Y-%m-%d")
         datetime_str = now_kst.strftime("%Y-%m-%d %H:%M:%S +0900")
@@ -693,7 +738,7 @@ description: "{self._escape_yaml(description)}"
             final_content = front_matter + body
             
             # Create directory and save file
-            output_dir = Path(f"_posts/{lang}")
+            output_dir = Path(output_root) / lang
             output_dir.mkdir(parents=True, exist_ok=True)
             output_path = output_dir / filename
             
@@ -735,6 +780,41 @@ description: "{self._escape_yaml(description)}"
     def _escape_yaml(self, text: str) -> str:
         """Escape YAML string"""
         return text.replace('"', '\\"').replace("\n", " ")
+
+
+def create_enrichment_review(draft_files: list[str], warnings: list[str]) -> str:
+    first_draft = Path(draft_files[0]).read_text(encoding="utf-8")
+    post_id_match = re.search(r'^post_id:\s*"?([^"\n]+)"?', first_draft, re.MULTILINE)
+    if not post_id_match:
+        raise ValueError("Draft is missing post_id")
+    post_id = post_id_match.group(1).strip()
+    review_path = Path("_reviews/pending") / f"{post_id}.md"
+    review_path.parent.mkdir(parents=True, exist_ok=True)
+    warning_lines = "\n".join(f"- {warning}" for warning in warnings)
+    review_path.write_text(
+        f"""---
+target_post_id: "{post_id}"
+scope: bilingual
+status: "draft"
+---
+
+# Automatic Enrichment Request
+
+The generated pair was preserved as a draft because it did not meet the publication safety floor.
+Review the draft files, add concrete instructions below, and change `status` to `ready` after draft promotion is supported.
+
+## Validation warnings
+
+{warning_lines}
+
+## Revision instructions
+
+- Enrich both language versions with source-grounded detail while preserving verified claims and references.
+""",
+        encoding="utf-8",
+    )
+    print(f"[FileWriterAgent] Enrichment review created: {review_path}")
+    return str(review_path)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -857,6 +937,7 @@ def main():
             checkpoint.save("korean_localizer", final_korean=final_korean)
 
         final_posts = {"ko": final_korean, "en": final_english}
+        publication_state, content_warnings = assess_content_release(final_posts, facts)
 
         if executed_model_stages > STANDARD_SUCCESSFUL_CALLS:
             raise RuntimeError(
@@ -882,9 +963,17 @@ def main():
         
         # ─── Step 5: Save files ──────────────────────────────────────
         file_writer = FileWriterAgent()
-        created_files = file_writer.run(final_posts, classification, fingerprint)
-        knowledge_files = generate_knowledge_notes(created_files)
-        created_files.extend(knowledge_files)
+        output_root = "_drafts" if publication_state == "draft" else "_posts"
+        created_files = file_writer.run(
+            final_posts,
+            classification,
+            fingerprint,
+            output_root=output_root,
+        )
+        if publication_state == "draft":
+            created_files.append(create_enrichment_review(created_files, content_warnings))
+        else:
+            created_files.extend(generate_knowledge_notes(created_files))
         
         print("\n" + "=" * 60)
         print("✅ All agent pipeline steps complete!")
@@ -894,14 +983,25 @@ def main():
         print("=" * 60)
         
         # Pass file list via environment variable (shared between GitHub Actions steps)
-        with open(os.environ.get("GITHUB_ENV", "/dev/null"), "a") as env_file:
+        with open(
+            os.environ.get("GITHUB_ENV", "/dev/null"),
+            "a",
+            encoding="utf-8",
+        ) as env_file:
             env_file.write(f"CREATED_FILES={','.join(created_files)}\n")
+            env_file.write(f"PUBLICATION_STATE={publication_state}\n")
 
         write_pipeline_result(
             "success",
             usage_tracker,
             created_files=created_files,
-            metrics={"source_quality": source_quality},
+            metrics={
+                "source_quality": source_quality,
+                "content_release": {
+                    "state": publication_state,
+                    "warnings": content_warnings,
+                },
+            },
         )
         
     except Exception as e:

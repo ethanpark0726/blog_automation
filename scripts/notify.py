@@ -110,6 +110,27 @@ def source_quality_summary(result: dict) -> str:
 
 
 def build_success_message(result: dict, pages: dict, pages_url: str, logs_url: str) -> str:
+    content_release = (result.get("metrics") or {}).get("content_release") or {}
+    publication_state = content_release.get("state", "published")
+    warnings = content_release.get("warnings") or []
+    warning_summary = ""
+    if warnings:
+        warning_summary = "\n\n⚠️ *콘텐츠 경고*\n" + "\n".join(
+            f"• `{str(warning)[:180]}`" for warning in warnings
+        )
+
+    if publication_state == "draft":
+        return (
+            "📝 *블로그 초안 생성 완료*\n\n"
+            f"📝 주제: `{QUERY_INPUT}`\n\n"
+            "⚠️ 안전 기준 미달로 공개 발행하지 않고 `_drafts`에 초안으로 보존했습니다.\n"
+            "보강용 Review Note도 `_reviews/pending`에 생성했습니다.\n\n"
+            f"🔍 [GitHub Actions 로그 확인]({logs_url})"
+            f"{warning_summary}"
+            f"{source_quality_summary(result)}"
+            f"{operations_usage_summary(result)}"
+        )
+
     pages_status = pages.get("status")
     pages_run_url = pages.get("run_url") or logs_url
     if pages_status == "success":
@@ -125,13 +146,20 @@ def build_success_message(result: dict, pages: dict, pages_url: str, logs_url: s
         deployment = "⚠️ 글 저장 완료 / GitHub Pages 상태 확인 불가"
         link = f"🔍 [GitHub Actions 상태]({logs_url})"
 
+    publication = (
+        "⚠️ 목표 품질 경고와 함께 발행했습니다.\n"
+        if publication_state == "published_with_warnings"
+        else ""
+    )
     return (
         "🎉 *블로그 생성 작업 완료*\n\n"
         f"📝 주제: `{QUERY_INPUT}`\n\n"
         "✅ 영문 참고자료 조사 및 사실 검증 완료\n"
         "✅ 검증된 영문 콘텐츠의 한국어 현지화 완료\n"
+        f"{publication}"
         f"{deployment}\n\n"
         f"{link}"
+        f"{warning_summary}"
         f"{source_quality_summary(result)}"
         f"{operations_usage_summary(result)}"
     )

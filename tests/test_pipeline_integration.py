@@ -243,6 +243,25 @@ class PipelineIntegrationTests(unittest.TestCase):
             finally:
                 os.chdir(original_cwd)
 
+    def test_duplicate_guard_blocks_existing_draft_fingerprint(self):
+        pipeline = load_pipeline_module()
+        fingerprint = pipeline.request_fingerprint("same question")
+        original_cwd = Path.cwd()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            draft_dir = temp_path / "_drafts" / "en"
+            draft_dir.mkdir(parents=True)
+            (draft_dir / "existing.md").write_text(
+                f'---\nrequest_fingerprint: "{fingerprint}"\n---\n',
+                encoding="utf-8",
+            )
+            os.chdir(temp_path)
+            try:
+                with self.assertRaises(pipeline.DuplicateRequestError):
+                    pipeline.ensure_request_is_new(fingerprint)
+            finally:
+                os.chdir(original_cwd)
+
     def test_full_checkpoint_resume_uses_no_additional_model_calls(self):
         pipeline = load_pipeline_module()
         pipeline.send_telegram = lambda *_args, **_kwargs: None
@@ -290,6 +309,71 @@ class PipelineIntegrationTests(unittest.TestCase):
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["usage"]["successful_calls"], 0)
 
+    def test_pipeline_preserves_short_checkpoint_content_as_draft(self):
+        pipeline = load_pipeline_module()
+        pipeline.send_telegram = lambda *_args, **_kwargs: None
+        pipeline.call_gemini = lambda *_args, **_kwargs: self.fail(
+            "checkpoint resume should not call Gemini"
+        )
+        fingerprint = pipeline.request_fingerprint(pipeline.QUERY_INPUT)
+        plan = {
+            "canonical_topic_en": "Formation of the Solar System",
+            "search_queries_en": ["solar system formation"],
+            "intent_summary_en": "Explain formation.",
+        }
+        short_en = (
+            "## Introduction\n\nToo short.\n\n## Details\n\nStill too short."
+            '\n\n```json_meta\n{"title":"Solar System","description":"Short",'
+            '"tags":["science"]}\n```'
+        )
+        short_ko = (
+            "## 소개\n\n짧은 글입니다.\n\n## 세부 내용\n\n아직 짧습니다."
+            '\n\n```json_meta\n{"title":"태양계","description":"짧은 글",'
+            '"tags":["과학"]}\n```'
+        )
+
+        original_cwd = Path.cwd()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            os.chdir(temp_path)
+            try:
+                checkpoint = pipeline.PipelineCheckpoint(fingerprint)
+                checkpoint.save(
+                    "research_writer",
+                    research_plan=plan,
+                    english_draft=short_en,
+                )
+                checkpoint.save("english_research", facts="restored verified facts")
+                checkpoint.save(
+                    "english_editor",
+                    reviewed_english=short_en,
+                    final_english=short_en,
+                )
+                checkpoint.save("korean_localizer", final_korean=short_ko)
+
+                with patch.dict(
+                    os.environ,
+                    {"GITHUB_ENV": str(temp_path / "github_env"), "GITHUB_ACTIONS": "true"},
+                ), patch("builtins.print"):
+                    pipeline.main()
+
+                result = json.loads(
+                    (temp_path / ".pipeline_result.json").read_text(encoding="utf-8")
+                )
+                env_text = (temp_path / "github_env").read_text(encoding="utf-8")
+                draft_files = list((temp_path / "_drafts").glob("*/*.md"))
+                review_files = list((temp_path / "_reviews" / "pending").glob("*.md"))
+                posts_exist = (temp_path / "_posts").exists()
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["metrics"]["content_release"]["state"], "draft")
+        self.assertEqual(len(draft_files), 2)
+        self.assertEqual(len(review_files), 1)
+        self.assertIn("PUBLICATION_STATE=draft", env_text)
+        self.assertFalse(posts_exist)
+
     def test_korean_localizer_recovers_missing_metadata_block(self):
         pipeline = load_pipeline_module()
         body = "## Intro\n\n" + ("Localized Korean article body. " * 80)
@@ -315,6 +399,112 @@ Link: https://en.wikipedia.org/wiki/MCP
         self.assertIn("```json_meta", localized)
         self.assertIn('"title": "MCP란 무엇인가?"', localized)
         self.assertIn("https://en.wikipedia.org/wiki/MCP", localized)
+
+    def test_editor_recovers_missing_metadata_block(self):
+        pipeline = load_pipeline_module()
+        body = "## Introduction\n\n" + ("Source-grounded explanation. " * 250)
+        body += "\n\n## Details\n\n" + ("Additional verified detail. " * 250)
+        facts = """
+[Wikipedia] Title: Sleep
+Snippet: Example source.
+Link: https://en.wikipedia.org/wiki/Sleep
+"""
+
+        pipeline.call_gemini = lambda *_args, **_kwargs: body
+        reviewed, final = pipeline.EditorAgent().run(
+            draft=article("en"),
+            classification={
+                "mode": "trivia",
+                "topic_en": "Why people breathe through the mouth during sleep",
+                "keywords": ["sleep", "breathing"],
+            },
+            facts=facts,
+        )
+
+        self.assertIn("```json_meta", reviewed)
+        self.assertIn(
+            '"title": "Why people breathe through the mouth during sleep"',
+            reviewed,
+        )
+        self.assertIn("https://en.wikipedia.org/wiki/Sleep", final)
+
+    def test_release_assessment_publishes_target_warning_but_drafts_safety_failure(self):
+        pipeline = load_pipeline_module()
+        facts = """
+[Wikipedia] Title: Sleep
+Snippet: Example source.
+Link: https://en.wikipedia.org/wiki/Sleep
+"""
+        moderate_en = "## Introduction\n\n" + ("verified detail " * 260)
+        moderate_en += "\n\n## Details\n\n" + ("more evidence " * 260)
+        moderate_en += (
+            '\n\n```json_meta\n{"title":"Sleep","description":"Sleep",'
+            '"tags":["sleep"]}\n```'
+        )
+        moderate_ko = "## 소개\n\n" + ("검증된 설명입니다. " * 80)
+        moderate_ko += "\n\n## 세부 내용\n\n" + ("추가 근거를 설명합니다. " * 80)
+        moderate_ko += (
+            '\n\n```json_meta\n{"title":"수면","description":"수면",'
+            '"tags":["수면"]}\n```'
+        )
+        references = [{"title": "Sleep", "url": "https://en.wikipedia.org/wiki/Sleep"}]
+        moderate_en = pipeline.append_references(moderate_en, "en", references)
+        moderate_ko = pipeline.append_references(moderate_ko, "ko", references)
+
+        state, warnings = pipeline.assess_content_release(
+            {"en": moderate_en, "ko": moderate_ko},
+            facts,
+        )
+
+        self.assertEqual(state, "published_with_warnings")
+        self.assertTrue(any("target" in warning for warning in warnings))
+
+        short_en = (
+            "## Introduction\n\nToo short.\n\n## Details\n\nStill too short."
+            '\n\n```json_meta\n{"title":"Sleep","description":"Sleep",'
+            '"tags":["sleep"]}\n```'
+        )
+        short_en = pipeline.append_references(short_en, "en", references)
+        state, warnings = pipeline.assess_content_release(
+            {"en": short_en, "ko": moderate_ko},
+            facts,
+        )
+
+        self.assertEqual(state, "draft")
+        self.assertTrue(any("safety floor" in warning for warning in warnings))
+
+    def test_writer_preserves_failed_pair_as_drafts_with_review_note(self):
+        pipeline = load_pipeline_module()
+        original_cwd = Path.cwd()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            os.chdir(temp_dir)
+            try:
+                created = pipeline.FileWriterAgent().run(
+                    {"en": article("en"), "ko": article("ko")},
+                    {
+                        "mode": "trivia",
+                        "topic_en": "Formation of the Solar System",
+                        "topic_ko": "태양계 형성",
+                        "keywords": ["solar system"],
+                    },
+                    "fingerprint",
+                    output_root="_drafts",
+                )
+                review_path = pipeline.create_enrichment_review(
+                    created,
+                    [
+                        "en: English body is below the 450-word safety floor",
+                        "ko: Korean body is below the 1200-character safety floor",
+                    ],
+                )
+                review = Path(review_path).read_text(encoding="utf-8")
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertTrue(all(path.startswith("_drafts") for path in created))
+        self.assertIn('status: "draft"', review)
+        self.assertIn("English body is below the 450-word safety floor", review)
+        self.assertIn("target_post_id:", review)
 
     def test_research_writer_recovers_missing_draft_metadata_block(self):
         pipeline = load_pipeline_module()
