@@ -34,6 +34,7 @@ from content_quality import (
     extract_references,
     is_usable_search_result,
     source_quality_score,
+    strip_pseudocode_blocks,
     validate_post,
 )
 from gemini_runtime import (
@@ -394,7 +395,8 @@ Local topic mode: {mode}
 Article requirements:
 - Write 1200-2000 English words with at least two `##` headings.
 - Include detailed mechanisms, a comparison table, historical context, and practical examples.
-- For technical topics, include code/configuration and a valid Mermaid diagram with quoted labels.
+- Never generate pseudocode. Include executable code or configuration only when it directly helps the reader.
+- Mermaid diagrams and other reader-friendly infographics are allowed; keep Mermaid node labels quoted.
 - Clearly qualify uncertain claims because external fact-checking happens after this draft.
 - End the article with a valid `json_meta` block containing title, description, and tags.
 
@@ -600,7 +602,8 @@ Review the draft directly against the collected reference facts, correct it, and
 7. Ensure all Mermaid node labels are wrapped in double quotes.
    - Correct: `A["text (with parentheses)"]`
    - Wrong: `A[text (with parentheses)]`
-8. Do not add a References/참고자료 section and do not invent URLs. The pipeline appends verified source links deterministically.
+8. Remove pseudocode. Preserve executable code/configuration only when it directly helps the reader; Mermaid infographics are allowed.
+9. Do not add a References/참고자료 section and do not invent URLs. The pipeline appends verified source links deterministically.
 
 **Draft:**
 ---
@@ -646,8 +649,9 @@ Rules:
 4. Use natural Korean rather than literal machine-translation phrasing.
 5. Keep code/configuration identifiers unchanged and translate explanatory comments only when safe.
 6. Keep all Mermaid node labels wrapped in double quotes.
-7. Do not add a 참고자료 section. The pipeline appends verified references locally.
-8. End with a valid `json_meta` block containing a Korean title, Korean description, and Korean tags array.
+7. Do not create or translate pseudocode. Preserve only useful executable code/configuration and Mermaid infographics.
+8. Do not add a 참고자료 section. The pipeline appends verified references locally.
+9. End with a valid `json_meta` block containing a Korean title, Korean description, and Korean tags array.
 
 Output only the complete Korean article and its final `json_meta` block.
 """
@@ -936,7 +940,10 @@ def main():
             executed_model_stages += 1
             checkpoint.save("korean_localizer", final_korean=final_korean)
 
-        final_posts = {"ko": final_korean, "en": final_english}
+        final_posts = {
+            "ko": strip_pseudocode_blocks(final_korean),
+            "en": strip_pseudocode_blocks(final_english),
+        }
         publication_state, content_warnings = assess_content_release(final_posts, facts)
 
         if executed_model_stages > STANDARD_SUCCESSFUL_CALLS:

@@ -90,6 +90,25 @@ class PipelineIntegrationTests(unittest.TestCase):
         pipeline = load_pipeline_module()
         stages = []
 
+        def generated_article(lang):
+            visual_blocks = """
+
+## Pseudocode
+
+```pseudocode
+FOR EACH item:
+    PROCESS item
+```
+
+## Infographic
+
+```mermaid
+flowchart TD
+    A["Source"] --> B["Result"]
+```
+"""
+            return article(lang).replace("\n\n```json_meta", visual_blocks + "\n```json_meta")
+
         def fake_call(_prompt, stage, retry=3):
             del retry
             stages.append(stage)
@@ -124,7 +143,7 @@ class PipelineIntegrationTests(unittest.TestCase):
             )
             pipeline.usage_tracker.record_attempt(stage)
             pipeline.usage_tracker.record_success(stage, response)
-            return article(lang)
+            return generated_article(lang)
 
         pipeline.call_gemini = fake_call
         pipeline.send_telegram = lambda *_args, **_kwargs: None
@@ -170,6 +189,7 @@ class PipelineIntegrationTests(unittest.TestCase):
                 en_files = list((temp_path / "_posts" / "en").glob("*.md"))
                 knowledge_files = list((temp_path / "_knowledge" / "concepts").glob("*.md"))
                 ko_content = ko_files[0].read_text(encoding="utf-8")
+                en_content = en_files[0].read_text(encoding="utf-8")
             finally:
                 os.chdir(original_cwd)
 
@@ -188,6 +208,12 @@ class PipelineIntegrationTests(unittest.TestCase):
         self.assertEqual(len(en_files), 1)
         self.assertGreaterEqual(len(knowledge_files), 1)
         self.assertIn("request_fingerprint:", ko_content)
+        self.assertNotIn("```pseudocode", en_content)
+        self.assertNotIn("```pseudocode", ko_content)
+        self.assertNotIn("## Pseudocode", en_content)
+        self.assertNotIn("## Pseudocode", ko_content)
+        self.assertIn("```mermaid", en_content)
+        self.assertIn("```mermaid", ko_content)
         self.assertIn(
             "formation of the solar system",
             [query.casefold() for query in search_queries],
