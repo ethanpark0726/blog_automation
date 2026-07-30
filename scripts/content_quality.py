@@ -90,6 +90,11 @@ STOPWORDS = {
 META_PATTERN = re.compile(r"```json_meta\s*(\{.*?\})\s*```", re.DOTALL)
 JSON_FENCE_PATTERN = re.compile(r"```json\s*(\{.*?\})\s*```", re.DOTALL)
 URL_PATTERN = re.compile(r"https?://[^\s)>\]}`]+")
+PSEUDOCODE_FENCE_PATTERN = re.compile(
+    r"(?:^[ \t]*#{1,6}[ \t]+(?:pseudo(?:[-_ ]?code)?|algorithm|의사\s*코드)[^\n]*\n+)?"
+    r"```[ \t]*(?:pseudo(?:[-_ ]?code)?|algorithm|의사\s*코드)[^\n]*\n.*?```",
+    re.IGNORECASE | re.DOTALL | re.MULTILINE,
+)
 
 NO_RESULT_MARKERS = (
     "no search results",
@@ -373,6 +378,11 @@ def append_missing_metadata_block(
     }
     meta_json = json.dumps(metadata, ensure_ascii=False)
     return f"{content}\n\n```json_meta\n{meta_json}\n```"
+
+
+def strip_pseudocode_blocks(content: str) -> str:
+    """Remove fenced pseudocode while preserving executable code and diagrams."""
+    return re.sub(r"\n{3,}", "\n\n", PSEUDOCODE_FENCE_PATTERN.sub("", content)).strip()
 
 
 def append_references(content: str, lang: str, references: Iterable[dict[str, str]]) -> str:

@@ -14,6 +14,7 @@
 
 ### Changed
 - **Operational Content Rule**: Generated `_drafts/` changes are exempt from the README/CHANGELOG enforcement rule, like `_posts/`, `_knowledge/`, and `_reviews/`.
+- **Pseudocode Policy**: Generation prompts now prohibit pseudocode, and a deterministic local cleanup removes labeled pseudocode sections before release validation while preserving executable code and Mermaid infographics.
 
 ---
 
