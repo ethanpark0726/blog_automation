@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.4] - 2026-08-01
+
+### Fixed
+- **Section-Targeted Heading Revisions**: `replace_block` operations that target a section with a heading-only replacement now update the heading and preserve the existing section body instead of failing.
+
+---
+
 ## [1.22.3] - 2026-08-01
 
 ### Fixed
