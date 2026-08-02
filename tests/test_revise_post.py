@@ -234,6 +234,33 @@ class KoreanOnlyOperationModel:
         )
 
 
+class SyncTranslationModel:
+    def __init__(self):
+        self.calls = 0
+
+    def generate_content(self, prompt, generation_config=None):
+        del generation_config
+        self.calls += 1
+        if "Korean source Markdown body" not in prompt:
+            raise AssertionError("sync translation prompt must include the Korean source body")
+        if "한국어에서 새로 보강한 문장" not in prompt:
+            raise AssertionError("sync translation prompt must include the edited Korean content")
+        body = (
+            "## Synced Introduction\n\n"
+            + ("The Korean source now adds a clearer explanation of heat stress and breathing load. " * 120)
+            + "\n\n## Synced Details\n\n"
+            + ("The English article now mirrors the Korean revision while preserving a natural blog style. " * 120)
+        )
+        return SimpleNamespace(
+            text=json.dumps({"body": body}, ensure_ascii=False),
+            usage_metadata=SimpleNamespace(
+                prompt_token_count=10,
+                candidates_token_count=20,
+                total_token_count=30,
+            ),
+        )
+
+
 class PromptAwarePreservationModel:
     def __init__(self):
         self.calls = 0
@@ -718,6 +745,52 @@ class RevisePostTests(unittest.TestCase):
         self.assertEqual(before_en, after_en)
         self.assertIn("수정된 한국어 본문이다", after_ko)
 
+    def test_sync_translation_updates_target_language_from_source_post(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            post_id = "sync-123"
+            (root / "_posts" / "ko").mkdir(parents=True)
+            (root / "_posts" / "en").mkdir(parents=True)
+            ko_path = root / "_posts" / "ko" / "post.md"
+            en_path = root / "_posts" / "en" / "post.md"
+            ko_path.write_text(
+                post("ko", post_id) + "\n\n## 수동 보강\n\n한국어에서 새로 보강한 문장입니다.\n",
+                encoding="utf-8",
+            )
+            en_path.write_text(post("en", post_id), encoding="utf-8")
+            before_ko = ko_path.read_text(encoding="utf-8")
+            review = ReviewRequest(
+                path=root / "_reviews" / "pending" / "request.md",
+                target_post_id=post_id,
+                mode="sync_translation",
+                source_lang="ko",
+                target_lang="en",
+                instructions=["한국어 포스트를 기준으로 영어 포스트를 동기화한다."],
+            )
+            model = SyncTranslationModel()
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                changed = apply_revision(
+                    review,
+                    model,
+                    SimpleNamespace(
+                        record_attempt=lambda _stage: None,
+                        record_success=lambda _stage, _response: None,
+                    ),
+                )
+                after_ko = ko_path.read_text(encoding="utf-8")
+                after_en = en_path.read_text(encoding="utf-8")
+            finally:
+                os.chdir(original_cwd)
+
+        self.assertEqual(1, model.calls)
+        self.assertEqual(before_ko, after_ko)
+        self.assertIn(str(Path("_posts") / "en" / "post.md"), changed)
+        self.assertNotIn(str(Path("_posts") / "ko" / "post.md"), changed)
+        self.assertIn("Synced Introduction", after_en)
+        self.assertIn("mirrors the Korean revision", after_en)
+
     def test_style_and_enrichment_preserve_the_existing_article(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -763,6 +836,9 @@ class RevisePostTests(unittest.TestCase):
 target_post_id: "abc123"
 scope: bilingual
 status: ready
+mode: sync_translation
+source_lang: ko
+target_lang: en
 ---
 
 # Revision
@@ -780,6 +856,9 @@ status: ready
                 os.chdir(original_cwd)
 
         self.assertEqual(review.target_post_id, "abc123")
+        self.assertEqual(review.mode, "sync_translation")
+        self.assertEqual(review.source_lang, "ko")
+        self.assertEqual(review.target_lang, "en")
         self.assertEqual(review.instructions, ["Add one paragraph."])
         self.assertEqual(len(discovered), 1)
 

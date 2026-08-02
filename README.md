@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-3.1%20Flash--Lite-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.22.4-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.23.0-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -183,6 +183,20 @@ After writing a ready review note in `_reviews/pending`, deploy the latest `clou
 - English and Korean are revised and validated separately. A language with no applicable action is not rewritten.
 - Research references used for enrichment are appended deterministically, and incomplete action coverage leaves both posts unchanged.
 
+To synchronize drift after editing one language locally, create a ready review note with `mode: sync_translation`:
+
+```markdown
+---
+target_post_id: your-post-id
+status: ready
+mode: sync_translation
+source_lang: ko
+target_lang: en
+---
+
+- 한국어 포스트를 기준으로 영어 포스트를 동기화한다.
+```
+
 ---
 
 ## ⚙️ Agent Pipeline Details
@@ -275,7 +289,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.22.4** — Normalizes section-targeted `replace_block` revisions that update headings while preserving section body content.
+**v1.23.0** — Adds Review Note translation sync mode so one language can be used as the source of truth for the paired post.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -327,7 +341,8 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.22.2**: Inline delete review actions can replace paragraph blocks safely
 - **`[x]` v1.22.3**: Omitted delete operations are recovered from Review Note instructions
 - **`[x]` v1.22.4**: Section-targeted heading replacements preserve body blocks
-- **`[ ]` v1.22.5**: Evaluate Gemini structured output after the graceful release policy is proven in production
+- **`[x]` v1.23.0**: Review Note `sync_translation` mode for KO-to-EN or EN-to-KO drift repair
+- **`[ ]` v1.23.1**: Evaluate Gemini structured output after the graceful release policy is proven in production
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 

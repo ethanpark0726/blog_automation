@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.0] - 2026-08-01
+
+### Added
+- **Translation Sync Review Mode**: Ready review notes can set `mode: sync_translation`, `source_lang`, and `target_lang` to synchronize one post language from the other after local edits create content drift.
+
+---
+
 ## [1.22.4] - 2026-08-01
 
 ### Fixed
