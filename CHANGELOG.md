@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.3] - 2026-08-01
+
+### Fixed
+- **Omitted Delete Operation Recovery**: When Gemini marks a delete action as applied but omits its operation tag, the revision executor now deletes the matching paragraph block from the review instruction instead of failing the workflow.
+
+---
+
 ## [1.22.2] - 2026-08-01
 
 ### Fixed

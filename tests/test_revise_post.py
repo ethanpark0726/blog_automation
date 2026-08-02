@@ -421,6 +421,68 @@ class RevisePostTests(unittest.TestCase):
         self.assertIn("Heat stress raises cardiovascular load.", revised)
         self.assertNotIn("🥵", revised)
 
+    def test_missing_delete_operation_is_applied_from_instruction(self):
+        plan = {
+            "actions": [
+                {
+                    "id": "R1",
+                    "kind": "delete",
+                    "languages": ["ko"],
+                    "instruction": "첫 서문 삭제",
+                },
+                {"id": "R2", "kind": "style", "languages": ["ko"]},
+                {"id": "R3", "kind": "delete", "languages": ["ko"], "instruction": "불필요한 이모지 삭제"},
+                {"id": "R4", "kind": "enrich", "languages": ["ko"]},
+                {
+                    "id": "R5",
+                    "kind": "delete",
+                    "languages": ["ko"],
+                    "instruction": "마지막 우리 친구들, 이야기로 만나요! 안녕!이라고 하는 마지막 결말 부분도 삭제",
+                },
+            ]
+        }
+        payload = {
+            "operations": [
+                {"action_ids": ["R1"], "operation": "delete", "target": "section_1.block_1", "content": ""},
+                {
+                    "action_ids": ["R2"],
+                    "operation": "replace_block",
+                    "target": "section_1.block_2",
+                    "content": "더운 환경에서는 심혈관계와 호흡계 부담이 함께 증가한다.",
+                },
+                {
+                    "action_ids": ["R3"],
+                    "operation": "replace_block",
+                    "target": "section_1.block_3",
+                    "content": "운동 중 수분 손실은 혈액량을 줄이고 산소 전달 효율을 떨어뜨린다.",
+                },
+                {
+                    "action_ids": ["R4"],
+                    "operation": "insert_after",
+                    "target": "section_1",
+                    "content": "## 추가 설명\n\n열 스트레스는 피부 혈류와 활동근 혈류가 경쟁하게 만든다.",
+                },
+            ],
+            "applied": ["R1", "R2", "R3", "R4", "R5"],
+            "unresolved": [],
+        }
+        original = (
+            "## 운동과 열 스트레스\n\n"
+            "우리 친구들, 안녕하세요!\n\n"
+            "더운 환경에서는 심장과 폐가 더 많이 일해요.\n\n"
+            "땀이 많이 나면 산소 전달이 어려워져요. 🥵\n\n"
+            "우리 친구들, 다음에도 더 재미있는 이야기로 만나요! 안녕!"
+        )
+
+        revised = revise_post.apply_section_operations(original, payload, plan, "ko")
+
+        self.assertNotIn("안녕하세요", revised)
+        self.assertIn("더운 환경에서는 심혈관계와 호흡계 부담이 함께 증가한다.", revised)
+        self.assertIn("열 스트레스는 피부 혈류와 활동근 혈류가 경쟁하게 만든다.", revised)
+        self.assertNotIn("🥵", revised)
+        self.assertNotIn("우리 친구들", revised)
+        self.assertNotIn("안녕", revised)
+
     def test_style_examples_are_not_required_literal_output(self):
         plan = {
             "actions": [

@@ -382,6 +382,58 @@ def render_markdown_blocks(heading: str, blocks: list[str | None]) -> str:
     return "\n\n".join(part for part in [heading, *blocks] if part)
 
 
+DELETE_INSTRUCTION_STOPWORDS = {
+    "delete",
+    "remove",
+    "삭제",
+    "마지막",
+    "결말",
+    "부분",
+    "부분도",
+    "하는",
+    "이라고",
+    "포스트에서",
+}
+
+
+def delete_block_matching_instruction(
+    sections: list[dict[str, str]],
+    block_states: dict[str, tuple[str, list[str | None]]],
+    instruction: str,
+) -> bool:
+    terms = [
+        term.casefold()
+        for term in re.findall(r"[A-Za-z가-힣]{2,}", instruction)
+        if term.casefold() not in DELETE_INSTRUCTION_STOPWORDS
+    ]
+    if not terms:
+        return False
+
+    candidates = []
+    for section_index, section in enumerate(sections):
+        heading, blocks = block_states.get(section["id"], split_markdown_blocks(section["content"]))
+        for block_index, block in enumerate(blocks):
+            if not block:
+                continue
+            text = block.casefold()
+            score = sum(1 for term in terms if term in text)
+            if score >= min(2, len(terms)):
+                candidates.append((score, section_index, block_index))
+    if not candidates:
+        return True
+
+    prefer_last = bool(re.search(r"마지막|결말|last|ending|conclusion", instruction, re.I))
+    _score, section_index, block_index = max(
+        candidates,
+        key=lambda item: (item[0], item[1], item[2]) if prefer_last else (item[0], -item[1], -item[2]),
+    )
+    section = sections[section_index]
+    heading, blocks = block_states[section["id"]]
+    blocks[block_index] = None
+    section["content"] = render_markdown_blocks(heading, blocks)
+    return True
+
+
 def revision_plan_prompt(review: ReviewRequest, bodies: dict[str, str]) -> str:
     instructions = "\n".join(
         f"R{index}: {instruction}" for index, instruction in enumerate(review.instructions, 1)
@@ -584,6 +636,7 @@ def apply_section_operations(
     }
     operation_actions = set()
     touched = set()
+    actions_by_id = {str(action["id"]): action for action in plan["actions"]}
     action_kinds = {str(action["id"]): str(action["kind"]) for action in plan["actions"]}
     allowed_operations = {
         "delete": {"delete", "replace_block"},
@@ -655,12 +708,22 @@ def apply_section_operations(
                 sections[target_index]["content"] = ""
                 block_states[section_target] = ("", [])
         else:
+            inserted_id = f"inserted_{len(sections)}"
             sections.insert(
                 target_index + 1,
-                {"id": f"inserted_{len(sections)}", "content": content},
+                {"id": inserted_id, "content": content},
             )
+            block_states[inserted_id] = split_markdown_blocks(content)
         touched.add(touch_key)
         operation_actions.update(action_ids)
+
+    for action_id in sorted(required - operation_actions):
+        action = actions_by_id[action_id]
+        if action_kinds[action_id] == "delete" and delete_block_matching_instruction(
+            sections, block_states, str(action.get("instruction") or "")
+        ):
+            operation_actions.add(action_id)
+            print(f"[Revision:{lang}] Locally applied omitted delete action {action_id}")
 
     if operation_actions != required:
         raise ValueError(
