@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.22.1] - 2026-08-01
+
+### Fixed
+- **Stable Revision Block Operations**: Obsidian revisions now keep original `section_N.block_N` targets stable when an earlier block in the same section is deleted before a later block is replaced.
+- **Block Delete Semantics**: Deleting `section_N.block_N` now removes only that paragraph block instead of clearing the entire section.
+
+---
+
 ## [1.22.0] — 2026-07-29
 
 ### Added
