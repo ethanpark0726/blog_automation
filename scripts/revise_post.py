@@ -31,6 +31,11 @@ REVISION_EDIT_CONFIG = {
     "max_output_tokens": 16384,
     "response_mime_type": "application/json",
 }
+SYNC_TRANSLATION_CONFIG = {
+    "temperature": 0.2,
+    "max_output_tokens": 16384,
+    "response_mime_type": "application/json",
+}
 PLACEHOLDER_POST_IDS = {"", "replace-with-real-post-id"}
 
 
@@ -40,6 +45,9 @@ class ReviewRequest:
     target_post_id: str
     scope: str = "bilingual"
     status: str = "ready"
+    mode: str = "revision"
+    source_lang: str = ""
+    target_lang: str = ""
     instructions: list[str] = field(default_factory=list)
 
 
@@ -111,6 +119,9 @@ def parse_review_note(path: Path) -> ReviewRequest:
         target_post_id=str(metadata.get("target_post_id") or "").strip(),
         scope=str(metadata.get("scope") or "bilingual").strip(),
         status=str(metadata.get("status") or "ready").strip(),
+        mode=str(metadata.get("mode") or "revision").strip(),
+        source_lang=str(metadata.get("source_lang") or "").strip(),
+        target_lang=str(metadata.get("target_lang") or "").strip(),
         instructions=instructions,
     )
 
@@ -576,6 +587,70 @@ Return JSON only:
 """
 
 
+def sync_translation_prompt(
+    source_lang: str,
+    target_lang: str,
+    source_body: str,
+    target_body: str,
+    instructions: list[str],
+) -> str:
+    source_name = "Korean" if source_lang == "ko" else "English"
+    target_name = "Korean" if target_lang == "ko" else "English"
+    instruction_text = "\n".join(f"- {instruction}" for instruction in instructions)
+    return f"""
+Synchronize the existing {target_name} Markdown article from the edited {source_name} source article.
+Return the complete revised {target_name} Markdown body only in JSON.
+
+Rules:
+1. Treat the {source_name} source as the source of truth for article content.
+2. Preserve the target language as natural {target_name}, not literal word-for-word translation.
+3. Preserve Markdown structure, level-2 headings, tables, Mermaid diagrams, and reference links when still relevant.
+4. Do not include YAML front matter. Return body content only.
+5. Keep at least two level-2 headings.
+
+Review instructions:
+{instruction_text or "- Synchronize the target article with the source article."}
+
+{source_name} source Markdown body:
+---
+{source_body}
+---
+
+Current {target_name} Markdown body:
+---
+{target_body}
+---
+
+Return JSON only:
+{{
+  "body": "complete revised {target_name} Markdown body"
+}}
+"""
+
+
+def request_sync_translation(
+    model: GeminiModelAdapter,
+    tracker: UsageTracker,
+    source_lang: str,
+    target_lang: str,
+    source_body: str,
+    target_body: str,
+    instructions: list[str],
+) -> str:
+    raw = call_gemini(
+        model,
+        sync_translation_prompt(source_lang, target_lang, source_body, target_body, instructions),
+        f"sync_translation_{source_lang}_to_{target_lang}",
+        tracker,
+        generation_config=SYNC_TRANSLATION_CONFIG,
+    )
+    body = str(parse_json_response(raw).get("body") or "").strip()
+    if not body:
+        raise ValueError("Sync translation response is missing body")
+    _front_matter, body = split_front_matter(body)
+    return normalize_legacy_section_headings(body)
+
+
 def revised_body_errors(front_matter: str, body: str, lang: str) -> list[str]:
     content = f"{front_matter}{body.strip()}\n"
     result = validate_post(content, lang, [])
@@ -798,6 +873,40 @@ def request_revision(
     return {"en": revised_english, "ko": revised_korean}
 
 
+def apply_sync_translation(
+    review: ReviewRequest,
+    model: GeminiModelAdapter,
+    tracker: UsageTracker,
+    post_paths: dict[str, Path],
+    front_matters: dict[str, str],
+    bodies: dict[str, str],
+) -> list[str]:
+    source_lang = (review.source_lang or "ko").strip().lower()
+    target_lang = (review.target_lang or "en").strip().lower()
+    if source_lang not in {"ko", "en"} or target_lang not in {"ko", "en"} or source_lang == target_lang:
+        raise ValueError("sync_translation requires distinct source_lang and target_lang values: ko or en")
+    missing = {source_lang, target_lang} - set(post_paths)
+    if missing:
+        raise ValueError(f"Missing sync translation posts for languages: {sorted(missing)}")
+
+    body = request_sync_translation(
+        model,
+        tracker,
+        source_lang,
+        target_lang,
+        bodies[source_lang],
+        bodies[target_lang],
+        review.instructions,
+    ).strip()
+    validate_revised_body(front_matters[target_lang], body, target_lang)
+
+    target_path = post_paths[target_lang]
+    target_path.write_text(f"{front_matters[target_lang]}{body}\n", encoding="utf-8")
+    updated_paths = [str(target_path)]
+    updated_paths.extend(generate_knowledge_notes([str(post_paths[source_lang]), str(target_path)]))
+    return updated_paths
+
+
 def apply_revision(review: ReviewRequest, model: GeminiModelAdapter, tracker: UsageTracker) -> list[str]:
     post_paths = find_posts_by_post_id(review.target_post_id)
     missing = {"ko", "en"} - set(post_paths)
@@ -812,6 +921,9 @@ def apply_revision(review: ReviewRequest, model: GeminiModelAdapter, tracker: Us
         front_matter, body = split_front_matter(path.read_text(encoding="utf-8"))
         front_matters[lang] = front_matter
         bodies[lang] = normalize_legacy_section_headings(body)
+
+    if review.mode.strip().casefold() == "sync_translation":
+        return apply_sync_translation(review, model, tracker, post_paths, front_matters, bodies)
 
     plan = create_revision_plan(review, bodies, model, tracker)
     search_queries = plan["search_queries_en"]
