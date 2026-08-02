@@ -421,6 +421,37 @@ class RevisePostTests(unittest.TestCase):
         self.assertIn("Heat stress raises cardiovascular load.", revised)
         self.assertNotIn("🥵", revised)
 
+    def test_replace_block_section_target_updates_heading_only(self):
+        plan = {
+            "actions": [
+                {"id": "R1", "kind": "delete", "languages": ["en"]},
+            ]
+        }
+        payload = {
+            "operations": [
+                {
+                    "action_ids": ["R1"],
+                    "operation": "replace_block",
+                    "target": "section_1",
+                    "content": "## The Core Concept",
+                },
+            ],
+            "applied": ["R1"],
+            "unresolved": [],
+        }
+        original = (
+            "## The Core Concept 🥵\n\n"
+            "Heat stress raises cardiovascular load.\n\n"
+            "Hydration changes blood volume."
+        )
+
+        revised = revise_post.apply_section_operations(original, payload, plan, "en")
+
+        self.assertIn("## The Core Concept", revised)
+        self.assertNotIn("🥵", revised)
+        self.assertIn("Heat stress raises cardiovascular load.", revised)
+        self.assertIn("Hydration changes blood volume.", revised)
+
     def test_missing_delete_operation_is_applied_from_instruction(self):
         plan = {
             "actions": [

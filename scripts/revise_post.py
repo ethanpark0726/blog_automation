@@ -688,9 +688,16 @@ def apply_section_operations(
             sections[target_index]["content"] = content
             block_states[section_target] = split_markdown_blocks(content)
         elif operation_name == "replace_block":
-            if not block_match:
-                raise ValueError(f"replace_block requires a block target for {lang}: {target}")
             heading, blocks = block_states[section_target]
+            if not block_match:
+                new_heading, new_blocks = split_markdown_blocks(content)
+                if new_heading and not new_blocks:
+                    sections[target_index]["content"] = render_markdown_blocks(new_heading, blocks)
+                    block_states[section_target] = (new_heading, blocks)
+                    touched.add(touch_key)
+                    operation_actions.update(action_ids)
+                    continue
+                raise ValueError(f"replace_block requires a block target for {lang}: {target}")
             block_number = int(block_match.group(2))
             if block_number < 1 or block_number > len(blocks):
                 raise ValueError(f"Unknown Markdown block: block_{block_number}")
