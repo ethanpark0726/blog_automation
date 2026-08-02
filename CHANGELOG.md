@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.2] - 2026-08-01
+
+### Fixed
+- **Inline Delete Revisions**: Delete-class review actions now allow `replace_block` when the requested deletion removes only inline content such as emoji, labels, or wording from an otherwise useful paragraph.
+
+---
+
 ## [1.22.1] - 2026-08-01
 
 ### Fixed

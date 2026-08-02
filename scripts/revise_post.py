@@ -586,7 +586,7 @@ def apply_section_operations(
     touched = set()
     action_kinds = {str(action["id"]): str(action["kind"]) for action in plan["actions"]}
     allowed_operations = {
-        "delete": {"delete"},
+        "delete": {"delete", "replace_block"},
         "replace": {"replace", "replace_block"},
         "enrich": {"insert_after", "replace_block"},
         "style": {"replace_block"},
