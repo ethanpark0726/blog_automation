@@ -378,6 +378,10 @@ def replace_markdown_block(content: str, block_number: int, replacement: str) ->
     return "\n\n".join(part for part in [heading, *blocks] if part)
 
 
+def render_markdown_blocks(heading: str, blocks: list[str | None]) -> str:
+    return "\n\n".join(part for part in [heading, *blocks] if part)
+
+
 def revision_plan_prompt(review: ReviewRequest, bodies: dict[str, str]) -> str:
     instructions = "\n".join(
         f"R{index}: {instruction}" for index, instruction in enumerate(review.instructions, 1)
@@ -574,6 +578,10 @@ def apply_section_operations(
     if not isinstance(operations, list):
         raise ValueError(f"{lang} revision response is missing operations")
     sections = split_markdown_sections(original)
+    block_states = {
+        section["id"]: split_markdown_blocks(section["content"])
+        for section in sections
+    }
     operation_actions = set()
     touched = set()
     action_kinds = {str(action["id"]): str(action["kind"]) for action in plan["actions"]}
@@ -625,14 +633,27 @@ def apply_section_operations(
 
         if operation_name == "replace":
             sections[target_index]["content"] = content
+            block_states[section_target] = split_markdown_blocks(content)
         elif operation_name == "replace_block":
             if not block_match:
                 raise ValueError(f"replace_block requires a block target for {lang}: {target}")
-            sections[target_index]["content"] = replace_markdown_block(
-                sections[target_index]["content"], int(block_match.group(2)), content
-            )
+            heading, blocks = block_states[section_target]
+            block_number = int(block_match.group(2))
+            if block_number < 1 or block_number > len(blocks):
+                raise ValueError(f"Unknown Markdown block: block_{block_number}")
+            blocks[block_number - 1] = content
+            sections[target_index]["content"] = render_markdown_blocks(heading, blocks)
         elif operation_name == "delete":
-            sections[target_index]["content"] = ""
+            if block_match:
+                heading, blocks = block_states[section_target]
+                block_number = int(block_match.group(2))
+                if block_number < 1 or block_number > len(blocks):
+                    raise ValueError(f"Unknown Markdown block: block_{block_number}")
+                blocks[block_number - 1] = None
+                sections[target_index]["content"] = render_markdown_blocks(heading, blocks)
+            else:
+                sections[target_index]["content"] = ""
+                block_states[section_target] = ("", [])
         else:
             sections.insert(
                 target_index + 1,

@@ -353,6 +353,48 @@ class RevisePostTests(unittest.TestCase):
 
         self.assertIn("Neutral sentence.", revised)
 
+    def test_block_targets_remain_stable_after_earlier_block_deletion(self):
+        plan = {
+            "actions": [
+                {"id": "R1", "kind": "delete", "languages": ["en"]},
+                {"id": "R2", "kind": "style", "languages": ["en"]},
+            ]
+        }
+        payload = {
+            "operations": [
+                {
+                    "action_ids": ["R1"],
+                    "operation": "delete",
+                    "target": "section_1.block_1",
+                    "content": "",
+                },
+                {
+                    "action_ids": ["R2"],
+                    "operation": "replace_block",
+                    "target": "section_1.block_3",
+                    "content": "Revised third paragraph.",
+                },
+            ],
+            "applied": ["R1", "R2"],
+            "unresolved": [],
+        }
+        original = (
+            "## Section\n\n"
+            "Delete this paragraph.\n\n"
+            "Keep this paragraph.\n\n"
+            "Original third paragraph.\n\n"
+            "## Other\n\n"
+            "Keep this section."
+        )
+
+        revised = revise_post.apply_section_operations(original, payload, plan, "en")
+
+        self.assertNotIn("Delete this paragraph.", revised)
+        self.assertIn("Keep this paragraph.", revised)
+        self.assertIn("Revised third paragraph.", revised)
+        self.assertNotIn("Original third paragraph.", revised)
+        self.assertIn("Keep this section.", revised)
+
     def test_style_examples_are_not_required_literal_output(self):
         plan = {
             "actions": [
