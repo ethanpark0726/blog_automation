@@ -395,6 +395,32 @@ class RevisePostTests(unittest.TestCase):
         self.assertNotIn("Original third paragraph.", revised)
         self.assertIn("Keep this section.", revised)
 
+    def test_delete_action_can_remove_inline_content_with_replace_block(self):
+        plan = {
+            "actions": [
+                {"id": "R1", "kind": "delete", "languages": ["en"]},
+            ]
+        }
+        payload = {
+            "operations": [
+                {
+                    "action_ids": ["R1"],
+                    "operation": "replace_block",
+                    "target": "section_1.block_1",
+                    "content": "Heat stress raises cardiovascular load.",
+                },
+            ],
+            "applied": ["R1"],
+            "unresolved": [],
+        }
+
+        revised = revise_post.apply_section_operations(
+            "## Section\n\nHeat stress raises cardiovascular load. 🥵", payload, plan, "en"
+        )
+
+        self.assertIn("Heat stress raises cardiovascular load.", revised)
+        self.assertNotIn("🥵", revised)
+
     def test_style_examples_are_not_required_literal_output(self):
         plan = {
             "actions": [

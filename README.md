@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-3.1%20Flash--Lite-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.22.1-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.22.2-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -275,7 +275,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.22.1** — Keeps stable Obsidian revision block targets valid after earlier block deletions in the same section.
+**v1.22.2** — Allows review delete actions to remove inline content by replacing only the affected paragraph block.
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -324,7 +324,8 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.21.6**: Remove brittle AI-generated include/exclude strings from revision validation
 - **`[x]` v1.22.0**: Editor metadata recovery and graceful publish-or-preserve content policy
 - **`[x]` v1.22.1**: Stable Obsidian revision block operations after same-section block deletions
-- **`[ ]` v1.22.2**: Evaluate Gemini structured output after the graceful release policy is proven in production
+- **`[x]` v1.22.2**: Inline delete review actions can replace paragraph blocks safely
+- **`[ ]` v1.22.3**: Evaluate Gemini structured output after the graceful release policy is proven in production
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion
 - **v2.0.0**: Voice input (Telegram voice messages), social media sharing (Twitter/X, LinkedIn)
 
