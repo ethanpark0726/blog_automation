@@ -93,7 +93,7 @@ Gradual adaptation over 10–14 days induces the following:
 * **Result:** While sweating begins sooner, the sweat becomes more dilute (lower salt concentration), preserving essential electrolytes.
 
 #### 2. Stabilization of Heart Rate
-* **Plasma Volume Expansion:** Heat acclimatization increases plasma volume by 10–15%, which increases stroke volume. Because the heart pumps more blood per beat, it does not need to beat as rapidly to maintain the same cardiac output ($Q = HR \times SV$).
+* **Plasma Volume Expansion:** Heat acclimatization increases plasma volume by 10–15%, which increases stroke volume. Because the heart pumps more blood per beat, it does not need to beat as rapidly to maintain the same cardiac output (Q = HR × SV).
 
 ### (3) Environmental Control (WBGT)
 * Use the **Wet Bulb Globe Temperature (WBGT)**, which accounts for humidity, radiant heat, and wind speed. High humidity prevents sweat evaporation, causing rapid core temperature spikes. Adjust intensity accordingly.
