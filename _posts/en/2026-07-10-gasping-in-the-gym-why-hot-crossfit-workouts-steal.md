@@ -26,77 +26,77 @@ The following are the physiological causes and organic changes that occur within
 
 To maintain a core body temperature within a stable range (approximately 37°C), the human body activates heat dissipation mechanisms in response to metabolic heat generated during exercise and external heat stress.
 
-### Increased Skin Blood Flow and Cardiovascular Drift
+### (1) Increased Skin Blood Flow and Cardiovascular Drift
+* **Cutaneous Vasodilation:** To dissipate heat, blood vessels near the skin dilate, drawing a large volume of blood to the surface.
+* **Reduced Muscle Perfusion and Venous Return:** As more blood is diverted to the skin, the volume of blood returning to the heart (**venous return**) and reaching the working muscles decreases.
+* **Decreased Stroke Volume:** With less blood returning to the heart, the volume of blood pumped per beat (**stroke volume**) also decreases.
+* **Cardiovascular Drift:** To maintain the required cardiac output, the heart must compensate by rapidly increasing its rate. This phenomenon is known as **Cardiovascular Drift**, where the heart becomes overloaded by simultaneously managing thermoregulation and oxygen delivery to muscles.
 
-A significant portion of the blood intended for working muscles is diverted to the skin via cutaneous vasodilation to facilitate heat release. This reduces venous return to the heart, which in turn decreases stroke volume.
+### (2) Dehydration and Increased Blood Viscosity
+* **Plasma Volume Reduction:** Profuse sweating to cool the body leads to a rapid decrease in **plasma volume**, the liquid component of blood.
+* **Increased Viscosity and Afterload:** As water is lost, blood becomes more viscous (thicker). The heart must exert greater force to pump this thicker blood through the body, increasing the resistance or **afterload** on the heart.
+* **Result:** The slower flow of viscous blood hinders the rapid delivery of oxygen to muscles and respiratory muscles (intercostal/diaphragm), ultimately triggering dyspnea.
 
-To maintain cardiac output (Q), the heart rate increases compensatorily—a phenomenon known as **cardiovascular drift**. The heart faces a dual challenge: supplying oxygen to muscles while simultaneously managing thermoregulation, which maximizes cardiovascular strain.
+## 2. Respiratory Regulation and Direct Stimulation of the Respiratory Center
 
-### Dehydration, Plasma Volume Reduction, and Blood Viscosity
+Hot environments directly impact the lungs and the respiratory control system responsible for gas exchange.
 
-Sweating, activated to suppress rising body temperature, leads to rapid loss of body water. Sustained sweating reduces plasma volume, thereby increasing blood viscosity. 
+### (1) Altered Oxygen-Hemoglobin Affinity
+* **Peripheral Tissues (Muscles):** As body temperature rises and metabolic byproducts (lactic acid, hydrogen ions) accumulate, hemoglobin in red blood cells releases oxygen more easily to supply the muscles.
+* **Alveolar Level (Lungs):** However, if body temperature rises excessively, hemoglobin may struggle to bind effectively with oxygen in the lungs, potentially leading to blood being circulated with suboptimal oxygen saturation.
 
-Increased blood viscosity raises peripheral resistance, which increases the heart's afterload and reduces the efficiency of oxygen delivery to tissues. This is a primary cause of insufficient oxygen supply to both working muscles and respiratory muscles.
-
-## 2. Respiratory Regulation and the Oxygen-Hemoglobin Dissociation Curve
-
-Exercise in hot environments directly impacts the respiratory system responsible for gas exchange.
-
-### Rightward Shift of the Oxygen-Hemoglobin Dissociation Curve
-
-Rising body temperature, increased metabolic byproducts (H+, CO2), and elevated 2,3-BPG levels shift the oxyhemoglobin dissociation curve to the right.
-
-- **Peripheral Tissues:** The rightward shift helps dissociate (release) oxygen more easily to working muscles.
-- **Alveolar Level:** In states of extreme hyperthermia, the hemoglobin's affinity for oxygen at the pulmonary capillary level may decrease, potentially reducing binding efficiency before the blood enters the arterial circulation.
-
-### Respiratory Compensation for Metabolic Acidosis and Thermal Hyperpnea
-
-High-intensity exercise leads to metabolic acidosis due to lactic acid accumulation and hydrogen ion (H+) buildup. Central and peripheral chemoreceptors detect this and trigger a compensatory surge in ventilation to expel hydrogen ions as CO2.
-
-Furthermore, heat stimulation directly excites the respiratory center in the hypothalamus, inducing **thermal hyperpnea**. This leads to hyperventilation, where breathing frequency increases rapidly regardless of gas exchange efficiency, causing the athlete to perceive severe dyspnea.
+### (2) Respiratory Compensation and Thermal Hyperpnea
+* **Respiratory Compensation for Metabolic Acidosis:** During high-intensity exercise, the accumulation of acidic substances like lactic acid causes blood pH to drop (**metabolic acidosis**). Chemical sensors (chemoreceptors) detect this and trigger a rapid increase in breathing to expel acidic byproducts in the form of carbon dioxide.
+* **Thermal Hyperpnea:** Furthermore, elevated body temperature directly stimulates the respiratory center in the brain (hypothalamus), causing excessive panting. This is known as **thermal hyperpnea**, where the athlete experiences severe dyspnea due to rapid, shallow breathing that does not necessarily improve gas exchange efficiency.
 
 ## 3. Physiological Response Process in Hot Environments
 
 ```mermaid
-graph TD
-    A[High Temperature & Metabolic Heat] --> B[Core Temperature Rise]
-    B --> C[Cutaneous Vasodilation & Increased Skin Blood Flow]
-    C --> D[Reduced Venous Return & Stroke Volume]
-    D --> E[Compensatory Heart Rate Increase / Cardiovascular Drift]
+flowchart TD
+    A["1. High Temperature & Heat Stress"] --> B["2. Core Temperature Rise"]
+    
+    subgraph C["[Cardiovascular Overload]"]
+        B --> C1["Cutaneous Vasodilation (Heat Dissipation)"]
+        C1 --> C2["Reduced Venous Return"]
+        C2 --> C3["Rapid Heart Rate Increase (Cardiovascular Drift)"]
+    end
 
-    B --> F[Sweating Activation]
-    F --> G[Dehydration & Plasma Volume Loss]
-    G --> H[Increased Blood Viscosity & Reduced Oxygen Delivery]
+    subgraph D["[Reduced Oxygen Delivery]"]
+        B --> D1["Sweating (Fluid Loss)"]
+        D1 --> D2["Increased Blood Viscosity (Thickening)"]
+        D2 --> D3["Reduced Oxygen Transport Efficiency"]
+    end
 
-    B --> I[Hyperthermia & H+ Accumulation]
-    I --> J[Rightward Shift of Oxyhemoglobin Curve]
-    I --> K[Hypothalamic Stimulation & Thermal Hyperpnea]
+    subgraph E["[Respiratory Center Stimulation]"]
+        B --> E1["Direct Brain Stimulation"]
+        E1 --> E2["Thermal Hyperpnea (Panting)"]
+    end
 
-    E & H & K --> L[Maximized Ventilatory Load & Perceived Dyspnea]
+    C3 & D3 & E2 --> F["3. Perception of Severe Dyspnea"]
 ```
 
 ## 4. Safety Management and Physiological Adaptation
 
-Dyspnea in hot environments is a warning signal of thermal stress and physiological limits. Scientific approaches to mitigate this include:
+Dyspnea in hot environments is a warning signal of thermal stress. Practical guidelines to mitigate this include:
 
-### 1) Hydration and Electrolyte Strategy
+### (1) Hydration and Electrolyte Strategy
+* **Pre-hydration:** Consume 5–7 mL of water per kg of body weight 2–4 hours before exercise to ensure proper hydration.
+* **Electrolyte Replacement:** For exercise lasting over an hour, use electrolyte drinks containing sodium to prevent plasma volume depletion. Note: Simply drinking water without electrolytes can lower blood osmotic pressure, causing fluid to shift out of the bloodstream into surrounding tissues.
+* **Weight Monitoring:** Ensure body weight does not fluctuate by more than 2% before and after exercise. (Replace approximately 1.2–1.5L of fluid per 1kg of weight lost).
 
-- **Pre-hydration:** Consume 5–7 mL of water per kg of body weight 2–4 hours before exercise to ensure euhydration.
-- **Electrolyte Replacement:** For high-intensity exercise lasting over an hour, consume electrolyte drinks containing sodium to prevent plasma volume depletion and hyponatremia.
-- **Weight Monitoring:** Monitor body weight before and after exercise to ensure fluid loss does not exceed 2% of body weight. (Replace approximately 1.2–1.5L of fluid per 1kg of weight lost).
+### (2) Physiological Principles of Heat Acclimatization
 
-### 2) Gradual Heat Acclimatization
+Gradual adaptation over 10–14 days induces the following:
 
-Gradual exposure to heat over 10–14 days induces the following adaptations:
+#### 1. Earlier Sweating and 'Dilute' Sweat
+* **Sodium Reabsorption:** The body learns to activate sweat glands at lower temperatures. Sweat glands consist of a 'coil' (secretion) and a 'duct' (reabsorption). Increased **aldosterone** levels enhance the efficiency of ion pumps in the duct, which reabsorb sodium and chloride back into the blood.
+* **Result:** While sweating begins sooner, the sweat becomes more dilute (lower salt concentration), preserving essential electrolytes.
 
-- **Plasma Volume Expansion:** Plasma volume increases by 10–15% within the first 3–5 days, helping maintain venous return and stroke volume.
-- **Improved Sweating Mechanism:** Sweating begins at a lower temperature threshold, and the sodium concentration in sweat decreases, reducing electrolyte loss.
-- **Reduced Resting Heart Rate and Core Temperature:** Cardiovascular and respiratory strain significantly decrease at the same exercise intensity.
+#### 2. Stabilization of Heart Rate
+* **Plasma Volume Expansion:** Heat acclimatization increases plasma volume by 10–15%, which increases stroke volume. Because the heart pumps more blood per beat, it does not need to beat as rapidly to maintain the same cardiac output ($Q = HR \times SV$).
 
-### 3) Environmental and Intensity Control (WBGT)
-
-- Use the **Wet Bulb Globe Temperature (WBGT)**, which accounts for humidity, radiant heat, and wind speed, to assess environmental risk.
-- In high WBGT environments, reduce exercise intensity (RPE) and ensure sufficient rest between sets to prevent excessive core temperature rise.
+### (3) Environmental Control (WBGT)
+* Use the **Wet Bulb Globe Temperature (WBGT)**, which accounts for humidity, radiant heat, and wind speed. High humidity prevents sweat evaporation, causing rapid core temperature spikes. Adjust intensity accordingly.
 
 ## References
 

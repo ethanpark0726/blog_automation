@@ -16,7 +16,7 @@ Ever wonder why breathing is so hard during hot CrossFit? Learn the science behi
 
 ## Related Posts
 - EN: [[2026-07-10-gasping-in-the-gym-why-hot-crossfit-workouts-steal|Gasping in the Gym: Why Hot CrossFit Workouts Steal Your Breath]] (`_posts/en/2026-07-10-gasping-in-the-gym-why-hot-crossfit-workouts-steal.md`)
-- KO: [[2026-07-10-크로스핏-짐이-찜통-더운-곳에서-운동하면-왜-숨쉬기가-힘들까-아빠가-알려주는-과학-이야기|더우면 왜 더 숨이 찰까? 고온 환경 운동 시 호흡 곤란의 생리학적 원인과 대처법]] (`_posts/ko/2026-07-10-크로스핏-짐이-찜통-더운-곳에서-운동하면-왜-숨쉬기가-힘들까-아빠가-알려주는-과학-이야기.md`)
+- KO: [[2026-07-10-더우면 왜 더 숨이 찰까 고온 환경 운동 시 호흡 곤란의 생리학적 원인과 대처법|더우면 왜 더 숨이 찰까? 고온 환경 운동 시 호흡 곤란의 생리학적 원인과 대처법]] (`_posts/ko/2026-07-10-더우면 왜 더 숨이 찰까 고온 환경 운동 시 호흡 곤란의 생리학적 원인과 대처법.md`)
 
 ## Related Concepts
 - [[crossfit|CrossFit]]
