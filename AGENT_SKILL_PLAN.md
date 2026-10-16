@@ -1,6 +1,7 @@
 # Blog automation rebuild: agent and skill foundation
 
-Status: foundation prepared; runtime implementation has not started.
+Status: Step 1 foundation complete. Step 2 corpus and proposed contract prepared;
+user review and behavioral tests are pending. Runtime implementation has not started.
 
 ## Goal and scope
 
@@ -47,7 +48,8 @@ Runtime rules will need explicit prompts, structured outputs, and code checks.
 - [x] Define development roles, ownership, handoffs, and authorization rules.
 - [x] Author two project-specific skills.
 - [x] Independently review the foundation documents.
-- [ ] Establish real failure fixtures.
+- [x] Preserve a real Post Pair snapshot and documented historical failures in `tests/fixtures/revision/` (raw provider payloads remain unavailable).
+- [x] Draft `REVISION_CONTRACT.md` for input/output, preservation, testing seams, and API limits.
 - [ ] Agree on generation/revision input-output contracts and bounded API budgets.
 - [ ] Replace the Revision Workflow core, preserving untouched content and metadata.
 - [ ] Share research collection between generation and revision; improve evidence retrieval.

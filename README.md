@@ -4,7 +4,7 @@
 [![Jekyll](https://img.shields.io/badge/Jekyll-4.3-red?logo=jekyll)](https://jekyllrb.com)
 [![Gemini](https://img.shields.io/badge/Gemini-3.1%20Flash--Lite-blue?logo=google)](https://ai.google.dev)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-1.23.1-purple)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.23.2-purple)](CHANGELOG.md)
 
 > Send a single message on Telegram and AI automatically generates **Korean + English** blog posts, then deploys them to GitHub Pages. **$0 cost. Zero human intervention.**
 
@@ -289,7 +289,7 @@ All Gemini calls pass through a shared runtime that records API attempts and res
 
 ## 📊 Current Version
 
-**v1.23.1** — Documents development-agent roles and adds local pipeline-evaluation and research-editorial skills. Runtime behavior is unchanged. See [the rebuild plan](AGENT_SKILL_PLAN.md) and [agent rules](AGENTS.md).
+**v1.23.2** — Adds a Revision contract proposal and real-post fixture corpus; excludes the local planning dashboard from Git. Runtime behavior is unchanged. See [the rebuild plan](AGENT_SKILL_PLAN.md) and [Revision contract](REVISION_CONTRACT.md).
 
 Full version history: [CHANGELOG.md](CHANGELOG.md)
 
@@ -343,6 +343,7 @@ Full version history: [CHANGELOG.md](CHANGELOG.md)
 - **`[x]` v1.22.4**: Section-targeted heading replacements preserve body blocks
 - **`[x]` v1.23.0**: Review Note `sync_translation` mode for KO-to-EN or EN-to-KO drift repair
 - **`[x]` v1.23.1**: Development-agent roles and two repository-local quality/evaluation skills
+- **`[x]` v1.23.2**: Revision contract proposal, original Post Pair fixtures, and ignored local dashboard
 - **`[ ]` Rebuild**: Real failure fixtures and reviewed contracts, followed by Revision Workflow redesign and research-quality improvements ([plan](AGENT_SKILL_PLAN.md))
 - **`[ ]` Backlog**: Evaluate Gemini structured output as part of the rebuild contracts
 - **`[ ]` v1.18.1**: Optional Gemini model fallback pool for quota exhaustion

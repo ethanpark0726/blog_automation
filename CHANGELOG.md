@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.23.2] - 2026-10-16
+
+### Added
+- Proposed Revision input/output, preservation policy, testing seams, and bounded API attempts in `REVISION_CONTRACT.md`.
+- An octane Post Pair fixture snapshot and explicitly sourced historical failure observations; no captured provider response is claimed.
+
+### Changed
+- Excluded `/local/` planning artifacts from Git. The dashboard is local-only; runtime and operational review notes are unchanged.
+
 ## [1.23.1] - 2026-10-16
 
 ### Added
