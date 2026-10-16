@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.1] - 2026-10-16
+
+### Added
+- Development-agent ownership, handoff, and preservation rules in `AGENTS.md`.
+- An incremental rebuild plan and acceptance-case inventory in `AGENT_SKILL_PLAN.md`.
+- Repository-local `blog-pipeline-evaluation` and `blog-research-editorial` skills for development and evaluation; no runtime behavior changes.
+
 ## [1.23.0] - 2026-08-01
 
 ### Added
