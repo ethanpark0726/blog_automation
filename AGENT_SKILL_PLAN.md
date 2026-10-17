@@ -1,11 +1,15 @@
 # Blog automation rebuild: agent and skill foundation
 
-Status: foundation prepared; runtime implementation has not started.
+Status: Step 1 foundation complete. Step 2 corpus and proposed contract prepared.
+As of 2026-10-17, paid search and the full Revision rebuild are deferred in favor
+of manual Korean enrichment plus existing translation sync. Runtime implementation
+has not started. Follow `MANUAL_CONTENT_WORKFLOW.md` for the current operating path.
 
 ## Goal and scope
 
 Improve article usefulness and make Obsidian Revision Workflow reliable while
-preserving existing posts and manual edits. Start with explicit roles, reusable
+preserving existing posts and manual edits. Use only free research sources; do not
+enable paid search or automatic paid fallback. Start with explicit roles, reusable
 skills, and observable acceptance criteria. Replace failing modules incrementally
 on feature branches; keep the working Telegram/Jekyll publication path available.
 
@@ -47,10 +51,14 @@ Runtime rules will need explicit prompts, structured outputs, and code checks.
 - [x] Define development roles, ownership, handoffs, and authorization rules.
 - [x] Author two project-specific skills.
 - [x] Independently review the foundation documents.
-- [ ] Establish real failure fixtures.
-- [ ] Agree on generation/revision input-output contracts and bounded API budgets.
-- [ ] Replace the Revision Workflow core, preserving untouched content and metadata.
-- [ ] Share research collection between generation and revision; improve evidence retrieval.
+- [x] Preserve a real Post Pair snapshot and documented historical failures in `tests/fixtures/revision/` (raw provider payloads remain unavailable).
+- [x] Draft `REVISION_CONTRACT.md` for input/output, preservation, testing seams, and API limits.
+- [x] Document manual KO enrichment and targeted translation synchronization.
+- [x] Run the existing offline translation-sync source-preservation test.
+- [ ] Validate one manually enriched post with the existing free-tier sync flow (not run automatically).
+- [ ] Deferred: agree on broader generation/revision contracts and bounded API budgets.
+- [ ] Deferred: replace the Revision Workflow core, preserving untouched content and metadata.
+- [ ] Deferred: share research collection between generation and revision; use free sources only.
 - [ ] Evaluate article quality against representative topics and original outputs.
 - [ ] Verify Telegram, Obsidian, bilingual sync, and publication together before rollout.
 
