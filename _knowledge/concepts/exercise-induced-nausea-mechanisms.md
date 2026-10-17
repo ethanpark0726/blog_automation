@@ -31,13 +31,7 @@ A source-grounded article about Exercise-induced nausea mechanisms.
 - [[영양|영양]]
 
 ## Sources
-- [[enwikipediaorg-c66855b3|Euphoria]]
-- [[enwikipediaorg-0ba28372|Exercise]]
-- [[enwikipediaorg-8d620f29|Vomiting]]
-- [[enwikipediaorg-d61fec19|Exercise-induced nausea]]
-- [[doiorg-689ec757|502 Functional Splanchnic Hypoperfusion Precedes Intestinal Epithelial Cell Damage During Strenuous Exercise]]
-- [[doiorg-372725a5|Figure 2: CHO oxidation rate during high intensity intermittent exercise.]]
-- [[doiorg-dd11db1b|Effect of prior eccentric exercise on muscle lactate accumulation during high intensity exercise]]
+- 
 
 ## Follow-up Questions
 - What adjacent concept should be explained next?
