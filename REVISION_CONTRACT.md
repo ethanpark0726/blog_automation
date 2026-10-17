@@ -1,7 +1,9 @@
 # Revision Workflow contract proposal
 
-Status: proposed for user review, not implemented. Foundation is complete; this
-document prepares Step 2. Existing `scripts/revise_post.py` remains unchanged.
+Status: deferred proposal, not implemented. As of 2026-10-17 the user prefers free
+generation, manual enrichment, and existing translation synchronization; see
+`MANUAL_CONTENT_WORKFLOW.md`. Keep this document as future design context.
+Existing `scripts/revise_post.py` remains unchanged.
 
 ## Public interface and test seams
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.23.3] - 2026-10-17
+
+### Added
+- A step-by-step guide for free research, manual Korean edits, and targeted use of the existing translation-sync workflow, including current title and length limitations.
+
+### Changed
+- Deferred the full Revision redesign and paid search alternatives in favor of manual enrichment. Runtime code is unchanged; the existing offline sync preservation test passes.
+
 ## [1.23.2] - 2026-10-16
 
 ### Added
