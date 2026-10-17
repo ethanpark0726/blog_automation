@@ -1,5 +1,5 @@
 ---
-target_post_id: ""
+target_post_id: exercise-induced-nausea-mechanisms-9a371a74
 scope: bilingual
 status: ready
 mode: sync_translation
